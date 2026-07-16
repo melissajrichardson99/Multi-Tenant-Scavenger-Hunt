@@ -1,45 +1,116 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Html5Qrcode } from 'html5-qrcode';
 import { apiClient } from '../api/client';
+
+const QR_REGION_ID = 'qr-reader-region';
+
+const REASON_MESSAGES = {
+  invalid_code: "That code doesn't match any character in this hunt. Double-check the sign and try again.",
+  already_scanned: "You've already found this character — check your progress gallery!",
+};
 
 export default function Scan() {
   const navigate = useNavigate();
   const [deviceToken, setDeviceToken] = useState('');
   const [manualCode, setManualCode] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
+  const [statusType, setStatusType] = useState(''); // 'success' | 'error'
   const [loading, setLoading] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+
+  const html5QrcodeRef = useRef(null);
+  const processingRef = useRef(false); // guards against duplicate submits while a scan is in flight
 
   useEffect(() => {
     const token = localStorage.getItem('device_token');
     if (!token) {
       setStatusMsg('No session found. Redirecting to home...');
+      setStatusType('error');
       setTimeout(() => navigate('/'), 2000);
     } else {
       setDeviceToken(token);
     }
   }, [navigate]);
 
-  const handleScanSubmit = async (codeVal) => {
-    if (!codeVal) return;
+  const resumeCamera = () => {
+    const scanner = html5QrcodeRef.current;
+    if (scanner && scanner.isScanning) {
+      scanner.resume();
+    }
+  };
+
+  const handleScanSubmit = useCallback(async (codeVal) => {
+    if (!codeVal || processingRef.current) return;
+    processingRef.current = true;
     setLoading(true);
     setStatusMsg('');
+    setStatusType('');
+
     try {
       const response = await apiClient.recordScan(deviceToken, codeVal);
       if (response.success) {
-        setStatusMsg('Success! Character scanned.');
-        // Route to CharacterReveal page with character payload
+        setStatusMsg('Success! Character found.');
+        setStatusType('success');
         setTimeout(() => {
           navigate(`/reveal/${response.character.id}`, { state: { scanResult: response } });
         }, 800);
       } else {
-        setStatusMsg(`Scan failed: ${response.reason}`);
+        setStatusMsg(REASON_MESSAGES[response.reason] || `Scan failed: ${response.reason}`);
+        setStatusType('error');
         setLoading(false);
+        processingRef.current = false;
+        resumeCamera();
       }
     } catch (err) {
       setStatusMsg(`Error recording scan: ${err.message}`);
+      setStatusType('error');
       setLoading(false);
+      processingRef.current = false;
+      resumeCamera();
     }
-  };
+  }, [deviceToken, navigate]);
+
+  // Start the camera-based scanner once we have a session to scan into.
+  useEffect(() => {
+    if (!deviceToken) return;
+
+    const scanner = new Html5Qrcode(QR_REGION_ID);
+    html5QrcodeRef.current = scanner;
+
+    scanner
+      .start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: 220 },
+        (decodedText) => {
+          const activeScanner = html5QrcodeRef.current;
+          if (activeScanner && activeScanner.isScanning) {
+            activeScanner.pause(true);
+          }
+          handleScanSubmit(decodedText);
+        },
+        () => {
+          // Fired continuously while no code is in view — not an error worth surfacing.
+        }
+      )
+      .catch((err) => {
+        setCameraError(
+          'Camera unavailable (permission denied or no camera found). Use "Enter Code Manually" below instead.'
+        );
+      });
+
+    return () => {
+      const activeScanner = html5QrcodeRef.current;
+      if (activeScanner) {
+        if (activeScanner.isScanning) {
+          activeScanner.stop().then(() => activeScanner.clear()).catch(() => {});
+        } else {
+          activeScanner.clear();
+        }
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deviceToken]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -49,47 +120,58 @@ export default function Scan() {
           Find the physical signs around the park and scan them.
         </p>
 
-        {/* Mock/Placeholder Camera Scanner Viewport */}
         <div className="camera-container">
-          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📷</div>
-            <p>QR Scanner Placeholder</p>
-            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>(Camera API loaded: html5-qrcode)</p>
-          </div>
+          <div id={QR_REGION_ID} style={{ width: '100%', height: '100%' }} />
+          {cameraError && (
+            <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>📷</div>
+              <p style={{ fontSize: '0.85rem' }}>{cameraError}</p>
+            </div>
+          )}
         </div>
 
         {statusMsg && (
-          <div style={{ marginTop: '1rem', fontWeight: '600', color: statusMsg.includes('failed') || statusMsg.includes('Error') ? 'var(--danger-color)' : 'var(--success-color)' }}>
+          <div
+            style={{
+              marginTop: '1rem',
+              fontWeight: '600',
+              padding: '0.75rem 1rem',
+              borderRadius: 'var(--radius-sm)',
+              color: statusType === 'error' ? 'var(--danger-color)' : 'var(--success-color)',
+              background: statusType === 'error' ? 'rgba(255,90,95,0.1)' : 'rgba(2,195,154,0.1)',
+              border: `1px solid ${statusType === 'error' ? 'var(--danger-color)' : 'var(--success-color)'}`,
+            }}
+          >
             {statusMsg}
           </div>
         )}
       </div>
 
-      {/* Manual Input (Highly helpful for testing without printing codes) */}
+      {/* Manual entry — a permanent fallback for guests if QR scanning fails on-site */}
       <div className="card">
-        <h3>Local Test Simulator</h3>
+        <h3>Enter Code Manually</h3>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
-          Simulate a QR scan scan by entering a character key below:
+          Trouble scanning? Type the code printed on the sign below.
         </p>
         <div className="form-group">
-          <input 
-            type="text" 
-            placeholder="e.g. char_cobb_2026, invalid, already"
+          <input
+            type="text"
+            placeholder="e.g. cobb-kangaroo-01"
             value={manualCode}
             onChange={(e) => setManualCode(e.target.value)}
             disabled={loading}
           />
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button 
-            className="btn btn-primary" 
+          <button
+            className="btn btn-primary"
             onClick={() => handleScanSubmit(manualCode)}
             disabled={loading || !manualCode}
           >
-            {loading ? 'Processing...' : 'Simulate QR Code Scan'}
+            {loading ? 'Processing...' : 'Submit Code'}
           </button>
-          <button 
-            className="btn btn-secondary" 
+          <button
+            className="btn btn-secondary"
             onClick={() => navigate('/progress')}
             disabled={loading}
           >
