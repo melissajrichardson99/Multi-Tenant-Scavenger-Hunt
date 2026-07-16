@@ -1,5 +1,45 @@
 # Scavenger Hunt App — Build Spec
 
+## Development Progress
+
+**Done and verified:**
+- [x] Repo, Git, Supabase project, schema, storage bucket all set up
+- [x] Skeleton scaffolding — FastAPI backend + React/Vite frontend, both running locally
+- [x] Real Postgres connection confirmed (not SQLite fallback)
+- [x] Session creation (`POST /api/sessions`) — real DB writes, verified via Swagger AND in-browser
+- [x] Session lookup (`GET /api/sessions/{device_token}`) — verified via Swagger
+- [x] Character creation + QR code generation (`POST /api/admin/characters`) — verified, real `.png` files generated and served
+- [x] `PlayerSession` model naming (avoids SQLAlchemy `Session` collision)
+- [x] `Home.jsx` wired to create/resume sessions via localStorage (not cookies) — verified in-browser
+- [x] Seed script (`backend/seed_db.py`) for test Organization + Hunt
+- [x] Admin `hunts.py` endpoints wired to real DB (list, create, update, stats)
+- [x] Real scan validation (`POST /api/scans`) — invalid code, duplicate scan, and reward-unlock logic all verified
+- [x] `Scan.jsx` wired to real camera QR reading (html5-qrcode) AND a permanent "Enter Code Manually" fallback for on-site reliability — both paths call the real endpoint
+- [x] Real progress tracking (`GET /api/progress/{device_token}`) — verified for 0%, partial, and 100% found states; unfound characters correctly masked ("???", no image) to avoid spoiling the hunt
+- [x] Confirmed a real end-to-end scan (Grim the Gatekeeper) recorded correctly in production Supabase data
+- [x] Switched primary dev tool from Antigravity to Claude Code (VS Code extension)
+- [x] `CLAUDE.md` created for persistent project context
+- [x] Fixed camera scanner bug where `Scan.jsx` sent the full decoded QR URL (`http://localhost:3000/scan?code=...`) instead of the bare `qr_code_value` to `POST /api/scans`, causing real QR codes to fail with `invalid_code`; now extracts the `code` query param (with a fallback to the raw decoded text if it isn't a valid URL) — verified by decoding a real generated QR PNG and confirming the extracted code matched that character's `qr_code_value` in the DB
+- [x] Verify camera QR scanning works via webcam on localhost — confirmed live in-browser after the parsing fix above
+
+**Not yet started:**
+- [ ] Verify camera QR scanning works on an actual phone in the field (blocked until deployment — mobile browsers require HTTPS for camera access, and localhost's secure-context exception doesn't extend to other devices hitting your laptop's local IP)
+- [ ] Character reveal page — confirm `CharacterReveal.jsx` renders real scan results (likely close to working already, given `Scan.jsx` navigates to it with real data, but not explicitly re-verified since progress.py went live)
+- [ ] Reward page — confirm `Reward.jsx` correctly displays a real unlocked reward (description/code) once `newly_unlocked_rewards` fires; currently only reads total_found/total_characters, share button is still a mock alert() (acceptable for v1 per spec, no discount codes)
+- [ ] Admin character CRUD UI (real forms, not just raw API calls via Swagger)
+- [ ] Admin login/auth made real (currently stubbed) — also needs to cover the auth gap on admin/scan/session/progress endpoints noted along the way
+- [ ] QR code batch printing (printable sheet/PDF)
+- [ ] Physical print-test on-site
+- [ ] UI restructuring pass
+- [ ] Deployment (hosting beyond localhost)
+- [ ] End-to-end live test with a real hunt
+
+**Known follow-ups / cleanup items:**
+- `qr_codes/` folder generated at project root instead of inside `backend/` — functional, cosmetic fix optional
+- No auth on admin routes (`hunts.py`, `characters.py`) or scan/session/progress routes — acceptable for local dev, must be addressed before deployment
+- `backend/test.py` previously had a real Supabase password committed; current version is redacted, but the old password remains recoverable in Git history (low risk given private repo + since-rotated password, but not fully scrubbed)
+- Database password has been rotated twice now (once after Antigravity exposure, once after the test.py exposure) — always confirm before committing that no file outside `.env` contains the real password
+
 ## 1. Database Schema (Postgres, via Supabase)
 
 ```sql

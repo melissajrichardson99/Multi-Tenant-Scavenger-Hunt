@@ -5,6 +5,19 @@ import { apiClient } from '../api/client';
 
 const QR_REGION_ID = 'qr-reader-region';
 
+// QR codes encode a full scan URL (e.g. http://localhost:3000/scan?code=xyz),
+// not the bare code, so pull the `code` param out before submitting. If the
+// decoded text isn't a URL at all, fall back to treating it as the raw code.
+function extractCodeFromScan(decodedText) {
+  try {
+    const url = new URL(decodedText);
+    const code = url.searchParams.get('code');
+    return code || decodedText;
+  } catch {
+    return decodedText;
+  }
+}
+
 const REASON_MESSAGES = {
   invalid_code: "That code doesn't match any character in this hunt. Double-check the sign and try again.",
   already_scanned: "You've already found this character — check your progress gallery!",
@@ -87,7 +100,7 @@ export default function Scan() {
           if (activeScanner && activeScanner.isScanning) {
             activeScanner.pause(true);
           }
-          handleScanSubmit(decodedText);
+          handleScanSubmit(extractCodeFromScan(decodedText));
         },
         () => {
           // Fired continuously while no code is in view — not an error worth surfacing.
