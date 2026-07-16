@@ -62,6 +62,9 @@ export const apiClient = {
 
   getProgress: (deviceToken) => request(`/progress/${deviceToken}`),
 
+  getCharacter: (characterId, deviceToken) =>
+    request(`/characters/${characterId}?device_token=${encodeURIComponent(deviceToken)}`),
+
   // Admin Endpoints
   adminLogin: async (email, password) => {
     const data = await request('/admin/login', {

@@ -59,6 +59,7 @@ def health_check(db: Session = Depends(get_db)):
 app.include_router(organizations.router)
 app.include_router(hunts.router)
 app.include_router(characters.router)
+app.include_router(characters.public_router)
 app.include_router(sessions.router)
 app.include_router(scans.router)
 app.include_router(progress.router)

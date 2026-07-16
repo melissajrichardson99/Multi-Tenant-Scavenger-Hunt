@@ -1,12 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { apiClient } from '../api/client';
 
 export default function Reward() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [deviceToken, setDeviceToken] = useState('');
   const [progress, setProgress] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Only populated when arriving straight from CharacterReveal's "Claim My
+  // Reward" button on the scan that completed the hunt — reward_description/
+  // reward_code aren't persisted anywhere the API can hand back later, so a
+  // direct nav or refresh here just shows the generic completion card below.
+  const unlockedRewards = location.state?.unlockedRewards || [];
 
   useEffect(() => {
     const token = localStorage.getItem('device_token');
@@ -63,6 +70,27 @@ export default function Reward() {
               You found all <strong>{progress.total_characters}</strong> characters hidden around Cobb's Adventure Park!
             </p>
           </div>
+
+          {unlockedRewards.length > 0 && (
+            <div style={{
+              background: 'rgba(0,168,150,0.15)',
+              border: '1px solid var(--success-color)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '1rem',
+              textAlign: 'left'
+            }}>
+              {unlockedRewards.map((reward, idx) => (
+                <div key={idx} style={{ marginBottom: idx < unlockedRewards.length - 1 ? '0.75rem' : 0 }}>
+                  <p style={{ margin: 0 }}>{reward.reward_description}</p>
+                  {reward.reward_code && (
+                    <p style={{ fontFamily: 'monospace', fontWeight: '700', margin: '0.25rem 0 0 0' }}>
+                      Code: {reward.reward_code}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Shareable card detail */}
           <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.05)', fontSize: '0.9rem' }}>

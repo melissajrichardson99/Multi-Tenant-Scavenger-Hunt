@@ -4,7 +4,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session as DBSession
 from ..database import get_db
-from ..models import Character
+from ..models import Character, PlayerSession, Scan
 
 try:
     import qrcode
@@ -14,6 +14,53 @@ except ImportError:
     QR_AVAILABLE = False
 
 router = APIRouter(prefix="/api/admin/characters", tags=["Admin Characters"])
+public_router = APIRouter(prefix="/api/characters", tags=["Characters"])
+
+
+@public_router.get("/{character_id}")
+def get_character_detail(character_id: str, device_token: str, db: DBSession = Depends(get_db)):
+    """
+    Public character detail lookup for the "revisit from gallery" flow.
+    Requires proof the requesting device already found this character (a
+    matching Scan row) — returns a generic 404 for any failure so a guest
+    can't probe for character IDs or other sessions' finds.
+    """
+    try:
+        character_uuid = uuid.UUID(character_id)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=404, detail="Character not found")
+
+    session = (
+        db.query(PlayerSession)
+        .filter(PlayerSession.device_token == device_token)
+        .first()
+    )
+    if not session:
+        raise HTTPException(status_code=404, detail="Character not found")
+
+    character = (
+        db.query(Character)
+        .filter(Character.id == character_uuid, Character.hunt_id == session.hunt_id)
+        .first()
+    )
+    if not character:
+        raise HTTPException(status_code=404, detail="Character not found")
+
+    scan = (
+        db.query(Scan)
+        .filter(Scan.session_id == session.id, Scan.character_id == character.id)
+        .first()
+    )
+    if not scan:
+        raise HTTPException(status_code=404, detail="Character not found")
+
+    return {
+        "id": str(character.id),
+        "name": character.name,
+        "description": character.description,
+        "image_url": character.image_url,
+        "points": character.points,
+    }
 
 # Directory where QR code images are stored (relative to project root).
 # main.py creates this directory on startup and mounts it as static files.
