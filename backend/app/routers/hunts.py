@@ -1,24 +1,39 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..database import get_db
+from ..models import Organization, Hunt, Character
 
 router = APIRouter(tags=["Hunts"])
 
 # Public Endpoint
 @router.get("/api/hunts/{slug}")
 def get_public_hunt(slug: str, db: Session = Depends(get_db)):
-    if slug != "cobbs":
+    organization = db.query(Organization).filter(Organization.slug == slug).first()
+    if not organization:
         raise HTTPException(status_code=404, detail="Hunt not found")
+
+    hunt = (
+        db.query(Hunt)
+        .filter(Hunt.organization_id == organization.id, Hunt.is_active == True)
+        .first()
+    )
+    if not hunt:
+        raise HTTPException(status_code=404, detail="Hunt not found")
+
+    total_characters = (
+        db.query(Character).filter(Character.hunt_id == hunt.id).count()
+    )
+
     return {
-        "hunt_id": "22222222-3333-4444-5555-666666666666",
-        "name": "Cobb's Summer Hunt 2026",
+        "hunt_id": str(hunt.id),
+        "name": hunt.name,
         "organization": {
-            "name": "Cobb's Adventure Park",
-            "theme_primary": "#000000",
-            "logo_url": "https://example.com/cobbs-logo.png"
+            "name": organization.name,
+            "theme_primary": organization.theme_primary,
+            "logo_url": organization.logo_url,
         },
-        "total_characters": 10,
-        "is_active": True
+        "total_characters": total_characters,
+        "is_active": hunt.is_active,
     }
 
 # Admin Endpoints
