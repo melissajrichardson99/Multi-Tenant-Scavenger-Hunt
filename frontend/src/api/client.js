@@ -1,6 +1,27 @@
 const API_BASE = '/api';
 
 /**
+ * Decodes the payload of a JWT without verifying its signature — fine for
+ * reading non-sensitive claims client-side (e.g. is this admin a super-admin),
+ * since the server independently enforces authorization on every request.
+ */
+function decodeTokenPayload(token) {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const json = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + c.charCodeAt(0).toString(16).padStart(2, '0'))
+        .join('')
+    );
+    return JSON.parse(json);
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
  * Helper to handle fetch responses and handle JSON parsing and errors.
  */
 async function request(path, options = {}) {
@@ -48,6 +69,7 @@ export const apiClient = {
   checkHealth: () => request('/health'),
 
   // Public / Gameplay Endpoints
+  getActiveHunts: () => request('/hunts'),
   getHunt: (slug) => request(`/hunts/${slug}`),
   
   createSession: (huntId) => request('/sessions', {
@@ -83,9 +105,20 @@ export const apiClient = {
     localStorage.removeItem('admin_token');
   },
 
+  // Reads the current admin's claims off the stored JWT. organization_id is
+  // null for super-admins (see AdminUser model / create_access_token).
+  getCurrentAdminClaims: () => {
+    const token = localStorage.getItem('admin_token');
+    return token ? decodeTokenPayload(token) : null;
+  },
+
   getOrganizations: () => request('/admin/organizations'),
   createOrganization: (orgData) => request('/admin/organizations', {
     method: 'POST',
+    body: JSON.stringify(orgData)
+  }),
+  updateOrganization: (orgData) => request('/admin/organizations', {
+    method: 'PATCH',
     body: JSON.stringify(orgData)
   }),
 

@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiClient } from '../api/client';
 
-export default function Home() {
-  const { slug } = useParams();
+export default function Start() {
+  const { orgSlug } = useParams();
   const navigate = useNavigate();
 
   const [hunt, setHunt] = useState(null);
@@ -11,9 +11,6 @@ export default function Home() {
   const [error, setError] = useState('');
   const [healthStatus, setHealthStatus] = useState(null);
   const [hasValidSession, setHasValidSession] = useState(false);
-
-  // Default slug to 'cobbs' if not specified
-  const huntSlug = slug || 'cobbs';
 
   useEffect(() => {
     let cancelled = false;
@@ -26,7 +23,7 @@ export default function Home() {
 
       try {
         // 2. Fetch hunt info
-        const huntData = await apiClient.getHunt(huntSlug);
+        const huntData = await apiClient.getHunt(orgSlug);
         if (cancelled) return;
         setHunt(huntData);
 
@@ -34,9 +31,10 @@ export default function Home() {
         const storedToken = localStorage.getItem('device_token');
         if (storedToken) {
           try {
-            await apiClient.getSession(storedToken);
-            // Token is valid — the session still exists in the DB
-            if (!cancelled) setHasValidSession(true);
+            const sessionData = await apiClient.getSession(storedToken);
+            // Token is valid, but only offer Resume if it belongs to *this* hunt —
+            // the same device_token can carry over from a different organization's hunt.
+            if (!cancelled) setHasValidSession(sessionData.hunt_id === huntData.hunt_id);
           } catch (sessionErr) {
             // 404 or network error — token is stale; clear it so we get a fresh one on Start
             localStorage.removeItem('device_token');
@@ -52,7 +50,7 @@ export default function Home() {
 
     initialize();
     return () => { cancelled = true; };
-  }, [huntSlug]);
+  }, [orgSlug]);
 
   const handleStartHunt = async () => {
     if (!hunt) return;

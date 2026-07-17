@@ -7,7 +7,40 @@ from ..auth import get_current_admin
 
 router = APIRouter(tags=["Hunts"])
 
-# Public Endpoint
+# Public Endpoints
+@router.get("/api/hunts")
+def list_active_hunts(db: Session = Depends(get_db)):
+    rows = (
+        db.query(Hunt, Organization)
+        .join(Organization, Hunt.organization_id == Organization.id)
+        .filter(Hunt.is_active == True)
+        .order_by(Organization.name, Hunt.name)
+        .all()
+    )
+
+    character_counts = dict(
+        db.query(Character.hunt_id, func.count(Character.id))
+        .filter(Character.hunt_id.in_([hunt.id for hunt, _ in rows]))
+        .group_by(Character.hunt_id)
+        .all()
+    )
+
+    return [
+        {
+            "hunt_id": str(hunt.id),
+            "name": hunt.name,
+            "organization": {
+                "name": organization.name,
+                "slug": organization.slug,
+                "theme_primary": organization.theme_primary,
+                "theme_secondary": organization.theme_secondary,
+                "logo_url": organization.logo_url,
+            },
+            "total_characters": character_counts.get(hunt.id, 0),
+        }
+        for hunt, organization in rows
+    ]
+
 @router.get("/api/hunts/{slug}")
 def get_public_hunt(slug: str, db: Session = Depends(get_db)):
     organization = db.query(Organization).filter(Organization.slug == slug).first()
@@ -53,17 +86,25 @@ def _serialize_hunt(hunt: Hunt) -> dict:
 
 @router.get("/api/admin/hunts")
 def get_admin_hunts(db: Session = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
-    hunts = db.query(Hunt).order_by(Hunt.created_at.desc()).all()
+    query = db.query(Hunt)
+    if admin.organization_id:
+        query = query.filter(Hunt.organization_id == admin.organization_id)
+    hunts = query.order_by(Hunt.created_at.desc()).all()
     return [_serialize_hunt(hunt) for hunt in hunts]
 
 @router.post("/api/admin/hunts")
 def create_admin_hunt(payload: dict, db: Session = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
-    organization_id = payload.get("organization_id")
     name = payload.get("name")
-    if not organization_id:
-        raise HTTPException(status_code=400, detail="organization_id is required")
     if not name:
         raise HTTPException(status_code=400, detail="name is required")
+
+    # Only super-admins (organization_id is None) may create new hunts.
+    if admin.organization_id:
+        raise HTTPException(status_code=403, detail="Only super-admins can create hunts")
+
+    organization_id = payload.get("organization_id")
+    if not organization_id:
+        raise HTTPException(status_code=400, detail="organization_id is required")
 
     organization = db.query(Organization).filter(Organization.id == organization_id).first()
     if not organization:
@@ -89,7 +130,10 @@ def update_admin_hunt(payload: dict, db: Session = Depends(get_db), admin: Admin
     if not hunt_id:
         raise HTTPException(status_code=400, detail="id is required")
 
-    hunt = db.query(Hunt).filter(Hunt.id == hunt_id).first()
+    query = db.query(Hunt).filter(Hunt.id == hunt_id)
+    if admin.organization_id:
+        query = query.filter(Hunt.organization_id == admin.organization_id)
+    hunt = query.first()
     if not hunt:
         raise HTTPException(status_code=404, detail="Hunt not found")
 
@@ -104,7 +148,10 @@ def update_admin_hunt(payload: dict, db: Session = Depends(get_db), admin: Admin
 
 @router.get("/api/admin/hunts/{hunt_id}/stats")
 def get_hunt_stats(hunt_id: str, db: Session = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
-    hunt = db.query(Hunt).filter(Hunt.id == hunt_id).first()
+    query = db.query(Hunt).filter(Hunt.id == hunt_id)
+    if admin.organization_id:
+        query = query.filter(Hunt.organization_id == admin.organization_id)
+    hunt = query.first()
     if not hunt:
         raise HTTPException(status_code=404, detail="Hunt not found")
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
-import Home from './pages/Home';
+import HuntSelector from './pages/HuntSelector';
+import Start from './pages/Start';
 import Scan from './pages/Scan';
 import Progress from './pages/Progress';
 import CharacterReveal from './pages/CharacterReveal';
@@ -47,14 +48,14 @@ export default function App() {
 
               <main>
                 <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/hunts/:slug" element={<Home />} />
+                  <Route path="/" element={<HuntSelector />} />
+                  <Route path="/start/:orgSlug" element={<Start />} />
                   <Route path="/scan" element={<Scan />} />
                   <Route path="/progress" element={<Progress />} />
                   <Route path="/reveal/:characterId" element={<CharacterReveal />} />
                   <Route path="/reward" element={<Reward />} />
-                  {/* Fallback to home */}
-                  <Route path="*" element={<Home />} />
+                  {/* Fallback to the hunt selector */}
+                  <Route path="*" element={<HuntSelector />} />
                 </Routes>
               </main>
 

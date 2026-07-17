@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../api/client';
 import CharacterManager from '../components/CharacterManager';
+import HuntManager from '../components/HuntManager';
+import OrganizationManager from '../components/OrganizationManager';
 
 export default function Admin() {
   const [token, setToken] = useState(localStorage.getItem('admin_token'));
@@ -8,27 +10,57 @@ export default function Admin() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [hunts, setHunts] = useState([]);
+  const [loadingHunts, setLoadingHunts] = useState(false);
+  const [organizations, setOrganizations] = useState([]);
+  const [loadingOrganizations, setLoadingOrganizations] = useState(false);
   const [selectedHuntId, setSelectedHuntId] = useState('');
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  const refreshOrganizations = () => {
+    setLoadingOrganizations(true);
+    apiClient.getOrganizations()
+      .then(data => {
+        setOrganizations(data);
+        setLoadingOrganizations(false);
+      })
+      .catch(err => {
+        setLoadingOrganizations(false);
+        if (err.status === 401 || err.status === 403) {
+          handleLogout();
+        } else {
+          setError('Failed to fetch organizations list.');
+        }
+      });
+  };
+
+  const refreshHunts = () => {
+    setLoadingHunts(true);
+    apiClient.getAdminHunts()
+      .then(data => {
+        setHunts(data);
+        setSelectedHuntId(prevSelected => {
+          if (prevSelected && data.some(h => h.id === prevSelected)) {
+            return prevSelected;
+          }
+          return data.length > 0 ? data[0].id : '';
+        });
+        setLoadingHunts(false);
+      })
+      .catch(err => {
+        setLoadingHunts(false);
+        if (err.status === 401 || err.status === 403) {
+          handleLogout();
+        } else {
+          setError('Failed to fetch hunts list.');
+        }
+      });
+  };
+
   useEffect(() => {
     if (token) {
-      // Fetch initial admin lists
-      apiClient.getAdminHunts()
-        .then(data => {
-          setHunts(data);
-          if (data.length > 0) {
-            setSelectedHuntId(data[0].id);
-          }
-        })
-        .catch(err => {
-          if (err.status === 401 || err.status === 403) {
-            handleLogout();
-          } else {
-            setError('Failed to fetch hunts list.');
-          }
-        });
+      refreshHunts();
+      refreshOrganizations();
     }
   }, [token]);
 
@@ -64,6 +96,7 @@ export default function Admin() {
     apiClient.adminLogout();
     setToken(null);
     setHunts([]);
+    setOrganizations([]);
     setStats(null);
   };
 
@@ -187,27 +220,18 @@ export default function Admin() {
           )}
         </div>
 
-        {/* Management stub operations */}
-        <div className="card">
-          <h3>Campaign Configuration Management</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-            CRUD panel skeleton. Add, modify or delete properties and campaigns.
-          </p>
+        <OrganizationManager
+          organizations={organizations}
+          loadingOrganizations={loadingOrganizations}
+          onOrganizationsChanged={refreshOrganizations}
+        />
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-            <div style={{ border: '1px solid var(--card-border)', borderRadius: 'var(--radius-sm)', padding: '1rem', background: 'rgba(0,0,0,0.1)' }}>
-              <h4>Properties (Orgs)</h4>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0.5rem 0 1rem 0' }}>Configure logos, slugs & visual primary/secondary styles.</p>
-              <button className="btn btn-secondary" onClick={() => alert('Feature stub: Properties Configuration')}>Manage Orgs</button>
-            </div>
-
-            <div style={{ border: '1px solid var(--card-border)', borderRadius: 'var(--radius-sm)', padding: '1rem', background: 'rgba(0,0,0,0.1)' }}>
-              <h4>Hunts</h4>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0.5rem 0 1rem 0' }}>Set active schedule timelines, and associate characters.</p>
-              <button className="btn btn-secondary" onClick={() => alert('Feature stub: Hunts Configuration')}>Manage Hunts</button>
-            </div>
-          </div>
-        </div>
+        <HuntManager
+          hunts={hunts}
+          loadingHunts={loadingHunts}
+          onHuntsChanged={refreshHunts}
+          organizations={organizations}
+        />
 
         <CharacterManager huntId={selectedHuntId} />
 
