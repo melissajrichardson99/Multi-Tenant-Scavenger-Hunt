@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiClient } from '../api/client';
+import CharacterManager from '../components/CharacterManager';
 
 export default function Admin() {
   const [token, setToken] = useState(localStorage.getItem('admin_token'));
@@ -190,7 +191,7 @@ export default function Admin() {
         <div className="card">
           <h3>Campaign Configuration Management</h3>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-            CRUD panel skeleton. Add, modify or delete properties, campaigns, characters and unlock triggers.
+            CRUD panel skeleton. Add, modify or delete properties and campaigns.
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
@@ -199,20 +200,16 @@ export default function Admin() {
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0.5rem 0 1rem 0' }}>Configure logos, slugs & visual primary/secondary styles.</p>
               <button className="btn btn-secondary" onClick={() => alert('Feature stub: Properties Configuration')}>Manage Orgs</button>
             </div>
-            
+
             <div style={{ border: '1px solid var(--card-border)', borderRadius: 'var(--radius-sm)', padding: '1rem', background: 'rgba(0,0,0,0.1)' }}>
               <h4>Hunts</h4>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0.5rem 0 1rem 0' }}>Set active schedule timelines, and associate characters.</p>
               <button className="btn btn-secondary" onClick={() => alert('Feature stub: Hunts Configuration')}>Manage Hunts</button>
             </div>
-
-            <div style={{ border: '1px solid var(--card-border)', borderRadius: 'var(--radius-sm)', padding: '1rem', background: 'rgba(0,0,0,0.1)' }}>
-              <h4>Characters</h4>
-              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '0.5rem 0 1rem 0' }}>Upload image assets, write reveal copy, and output QR sheets.</p>
-              <button className="btn btn-secondary" onClick={() => alert('Feature stub: Characters Configuration')}>Manage Characters</button>
-            </div>
           </div>
         </div>
+
+        <CharacterManager huntId={selectedHuntId} />
 
       </div>
     </div>

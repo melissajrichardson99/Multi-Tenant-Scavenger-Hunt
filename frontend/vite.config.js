@@ -12,6 +12,11 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
+      },
+      '/qr_codes': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false,
       }
     }
   }
