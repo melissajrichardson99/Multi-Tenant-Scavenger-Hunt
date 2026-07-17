@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from ..database import get_db
-from ..models import Organization, Hunt, Character, PlayerSession, Scan
+from ..models import Organization, Hunt, Character, PlayerSession, Scan, AdminUser
+from ..auth import get_current_admin
 
 router = APIRouter(tags=["Hunts"])
 
@@ -51,12 +52,12 @@ def _serialize_hunt(hunt: Hunt) -> dict:
 
 
 @router.get("/api/admin/hunts")
-def get_admin_hunts(db: Session = Depends(get_db)):
+def get_admin_hunts(db: Session = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
     hunts = db.query(Hunt).order_by(Hunt.created_at.desc()).all()
     return [_serialize_hunt(hunt) for hunt in hunts]
 
 @router.post("/api/admin/hunts")
-def create_admin_hunt(payload: dict, db: Session = Depends(get_db)):
+def create_admin_hunt(payload: dict, db: Session = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
     organization_id = payload.get("organization_id")
     name = payload.get("name")
     if not organization_id:
@@ -83,7 +84,7 @@ def create_admin_hunt(payload: dict, db: Session = Depends(get_db)):
     return _serialize_hunt(hunt)
 
 @router.patch("/api/admin/hunts")
-def update_admin_hunt(payload: dict, db: Session = Depends(get_db)):
+def update_admin_hunt(payload: dict, db: Session = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
     hunt_id = payload.get("id")
     if not hunt_id:
         raise HTTPException(status_code=400, detail="id is required")
@@ -102,7 +103,7 @@ def update_admin_hunt(payload: dict, db: Session = Depends(get_db)):
     return _serialize_hunt(hunt)
 
 @router.get("/api/admin/hunts/{hunt_id}/stats")
-def get_hunt_stats(hunt_id: str, db: Session = Depends(get_db)):
+def get_hunt_stats(hunt_id: str, db: Session = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
     hunt = db.query(Hunt).filter(Hunt.id == hunt_id).first()
     if not hunt:
         raise HTTPException(status_code=404, detail="Hunt not found")

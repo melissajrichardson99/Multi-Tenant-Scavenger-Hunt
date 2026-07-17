@@ -4,7 +4,8 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session as DBSession
 from ..database import get_db
-from ..models import Character, PlayerSession, Scan
+from ..models import Character, PlayerSession, Scan, AdminUser
+from ..auth import get_current_admin
 
 try:
     import qrcode
@@ -86,7 +87,7 @@ def _generate_qr_image(qr_code_value: str) -> str:
 
 
 @router.get("")
-def get_admin_characters(hunt_id: str = None, db: DBSession = Depends(get_db)):
+def get_admin_characters(hunt_id: str = None, db: DBSession = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
     """List all characters, optionally filtered by hunt_id."""
     query = db.query(Character)
     if hunt_id:
@@ -109,7 +110,7 @@ def get_admin_characters(hunt_id: str = None, db: DBSession = Depends(get_db)):
 
 
 @router.post("")
-def create_admin_character(payload: dict, db: DBSession = Depends(get_db)):
+def create_admin_character(payload: dict, db: DBSession = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
     """
     Create a new character.  Automatically generates a unique qr_code_value
     (UUID) and saves a QR code PNG to disk.  Returns the created character
@@ -159,7 +160,7 @@ def create_admin_character(payload: dict, db: DBSession = Depends(get_db)):
 
 
 @router.patch("")
-def update_admin_character(payload: dict, db: DBSession = Depends(get_db)):
+def update_admin_character(payload: dict, db: DBSession = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
     """Update mutable fields on a character (does not regenerate QR code)."""
     character_id = payload.get("id")
     if not character_id:
@@ -191,7 +192,7 @@ def update_admin_character(payload: dict, db: DBSession = Depends(get_db)):
 
 
 @router.delete("")
-def delete_admin_character(character_id: str, db: DBSession = Depends(get_db)):
+def delete_admin_character(character_id: str, db: DBSession = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
     """Delete a character by ID."""
     character = db.query(Character).filter(Character.id == character_id).first()
     if not character:

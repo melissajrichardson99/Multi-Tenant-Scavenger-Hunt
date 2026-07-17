@@ -19,15 +19,19 @@
 - [x] Confirmed a real end-to-end scan (Grim the Gatekeeper) recorded correctly in production Supabase data
 - [x] Switched primary dev tool from Antigravity to Claude Code (VS Code extension)
 - [x] `CLAUDE.md` created for persistent project context
-- [x] Fixed camera scanner bug where `Scan.jsx` sent the full decoded QR URL (`http://localhost:3000/scan?code=...`) instead of the bare `qr_code_value` to `POST /api/scans`, causing real QR codes to fail with `invalid_code`; now extracts the `code` query param (with a fallback to the raw decoded text if it isn't a valid URL) — verified by decoding a real generated QR PNG and confirming the extracted code matched that character's `qr_code_value` in the DB
-- [x] Verify camera QR scanning works via webcam on localhost — confirmed live in-browser after the parsing fix above
+- [x] Camera QR scanning verified via webcam on localhost — fixed a real bug where the scanner passed the full encoded URL instead of extracting the `code` param, now correctly matches real characters
+- [x] Character reveal page — `CharacterReveal.jsx` verified against real scan results (found a real bug where it fell back to hardcoded mock data whenever route state was missing; fixed)
+- [x] Reward page — `Reward.jsx` verified against real progress data; now displays real `reward_description`/`reward_code` when a reward is unlocked
+- [x] Character revisit flow — clicking a found character in the Progress gallery now shows real details via a new `GET /api/characters/{character_id}` endpoint (ownership-verified via device_token + Scan record, returns uniform 404 for any unowned/nonexistent/malformed lookup — no data leak)
+- [x] Shareable completion card — real PNG generation via html2canvas, with native share-sheet support (mobile) and direct-download fallback (desktop), verified via Playwright in real Chromium against both paths
+- [x] Full core gameplay loop confirmed working end-to-end with real data: start hunt → scan character (camera or manual entry) → reveal → progress → revisit found characters → 100% completion → real shareable reward card
+- [x] Real admin authentication — `admin_users.password_hash` via passlib/bcrypt, `POST /api/admin/login` issues a 24h JWT (python-jose/pyjwt), `get_current_admin` dependency (`backend/app/auth.py`) now guards every route in `organizations.py`, the `/api/admin/*` routes in `hunts.py`, the admin router in `characters.py`, and `admin.py` (except `/login` itself); `backend/create_admin.py` added for bootstrapping the first admin user with a properly hashed password. `Admin.jsx`/`client.js` already had real (non-mock) login + token-storage + Bearer-header wiring in place — only needed the 401 detection fixed (client.js now attaches `error.status` since FastAPI's `detail` text doesn't contain the status code) so `Admin.jsx` correctly redirects to the login screen on a 401. Verified: wrong/nonexistent credentials → clean 401 (not 500), valid login → working JWT, that JWT successfully authorizes real admin actions (listing hunts/orgs), no-token and garbage-token requests are rejected with 401 on the same endpoints, and `GET /api/hunts/{slug}` plus all scan/session/progress endpoints remain fully unauthenticated as intended.
 
 **Not yet started:**
 - [ ] Verify camera QR scanning works on an actual phone in the field (blocked until deployment — mobile browsers require HTTPS for camera access, and localhost's secure-context exception doesn't extend to other devices hitting your laptop's local IP)
-- [ ] Character reveal page — confirm `CharacterReveal.jsx` renders real scan results (likely close to working already, given `Scan.jsx` navigates to it with real data, but not explicitly re-verified since progress.py went live)
-- [ ] Reward page — confirm `Reward.jsx` correctly displays a real unlocked reward (description/code) once `newly_unlocked_rewards` fires; currently only reads total_found/total_characters, share button is still a mock alert() (acceptable for v1 per spec, no discount codes)
 - [ ] Admin character CRUD UI (real forms, not just raw API calls via Swagger)
-- [ ] Admin login/auth made real (currently stubbed) — also needs to cover the auth gap on admin/scan/session/progress endpoints noted along the way
+- [ ] Fix `POST /api/admin/reward-tiers` — now behind admin auth, but still a stub that echoes the payload without writing to the database; no real way to configure reward tiers through the normal admin flow yet
+- [ ] Enhance shareable completion card with per-property marketing branding (logo, website URL, contact info) — card currently works but is generic; since it's meant to double as informal marketing for whichever property the hunt belongs to (Cobb's, Screamfest, etc.), it should pull from each Organization's existing logo_url/theme fields rather than being hardcoded
 - [ ] QR code batch printing (printable sheet/PDF)
 - [ ] Physical print-test on-site
 - [ ] UI restructuring pass
@@ -36,7 +40,8 @@
 
 **Known follow-ups / cleanup items:**
 - `qr_codes/` folder generated at project root instead of inside `backend/` — functional, cosmetic fix optional
-- No auth on admin routes (`hunts.py`, `characters.py`) or scan/session/progress routes — acceptable for local dev, must be addressed before deployment
+- Admin routes now require a valid JWT; scan/session/progress routes remain intentionally open (guest-facing, protected by `device_token` instead) — no change needed there
+- `JWT_SECRET_KEY` isn't in `.env` yet — `backend/app/auth.py` falls back to an insecure dev default so the app doesn't crash, but a real random secret must be added to `.env` (`JWT_SECRET_KEY=...`) before deployment
 - `backend/test.py` previously had a real Supabase password committed; current version is redacted, but the old password remains recoverable in Git history (low risk given private repo + since-rotated password, but not fully scrubbed)
 - Database password has been rotated twice now (once after Antigravity exposure, once after the test.py exposure) — always confirm before committing that no file outside `.env` contains the real password
 

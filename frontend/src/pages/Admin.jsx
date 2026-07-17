@@ -22,7 +22,7 @@ export default function Admin() {
           }
         })
         .catch(err => {
-          if (err.message.includes('401') || err.message.includes('403')) {
+          if (err.status === 401 || err.status === 403) {
             handleLogout();
           } else {
             setError('Failed to fetch hunts list.');
@@ -35,7 +35,13 @@ export default function Admin() {
     if (selectedHuntId) {
       apiClient.getHuntStats(selectedHuntId)
         .then(data => setStats(data))
-        .catch(() => setError('Failed to fetch stats for this hunt.'));
+        .catch(err => {
+          if (err.status === 401 || err.status === 403) {
+            handleLogout();
+          } else {
+            setError('Failed to fetch stats for this hunt.');
+          }
+        });
     }
   }, [selectedHuntId]);
 

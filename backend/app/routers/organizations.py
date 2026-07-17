@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from ..database import get_db
+from ..models import AdminUser
+from ..auth import get_current_admin
 
 router = APIRouter(prefix="/api/admin/organizations", tags=["Admin Organizations"])
 
 @router.get("")
-def get_organizations(db: Session = Depends(get_db)):
+def get_organizations(db: Session = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
     # Placeholder return
     return [
         {
@@ -19,7 +21,7 @@ def get_organizations(db: Session = Depends(get_db)):
     ]
 
 @router.post("")
-def create_organization(payload: dict, db: Session = Depends(get_db)):
+def create_organization(payload: dict, db: Session = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
     # Placeholder return
     return {
         "id": "11111111-2222-3333-4444-555555555555",

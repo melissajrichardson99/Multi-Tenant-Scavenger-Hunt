@@ -30,7 +30,9 @@ async function request(path, options = {}) {
     } catch (e) {
       errorData = { detail: response.statusText };
     }
-    throw new Error(errorData.detail || 'API request failed');
+    const error = new Error(errorData.detail || 'API request failed');
+    error.status = response.status;
+    throw error;
   }
 
   // Handle case where body might be empty or 204 No Content
