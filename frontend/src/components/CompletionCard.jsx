@@ -59,6 +59,10 @@ const CompletionCard = forwardRef(function CompletionCard(
 
   const bannerTextColor = isLightColor(primary) ? '#1a1a1a' : '#ffffff';
   const badgeRing = ensureContrast(secondary, !isLightColor(primary));
+  // Logo artwork is designed for a specific background: dark logos expect a
+  // light plate, light/reversed logos (e.g. "Logo-Dark-Alt") expect a dark
+  // plate. theme_mode tells us which the org's logo was designed for.
+  const badgeBg = isDark ? '#0d0d0f' : '#ffffff';
 
   const scrimBg = isDark ? 'rgba(12, 12, 16, 0.62)' : 'rgba(255, 255, 255, 0.9)';
   const textColor = isDark ? '#ffffff' : '#1a1a1a';
@@ -80,14 +84,14 @@ const CompletionCard = forwardRef(function CompletionCard(
         textAlign: 'center',
       }}
     >
-      {/* Brand focal point: logo on a neutral plate so any logo (transparent,
-          dark, or light) stays legible against an arbitrary org color. */}
+      {/* Brand focal point: logo on a neutral plate matched to theme_mode so
+          both dark-on-light and light-on-dark logo artwork stays legible. */}
       <div
         style={{
           width: 132,
           height: 132,
           borderRadius: '50%',
-          background: '#ffffff',
+          background: badgeBg,
           border: `4px solid ${badgeRing}`,
           boxShadow: '0 8px 20px rgba(0,0,0,0.35)',
           margin: '0 auto',

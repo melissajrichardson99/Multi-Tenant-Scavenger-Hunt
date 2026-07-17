@@ -35,7 +35,7 @@ export default function Reward() {
   useEffect(() => {
     const token = localStorage.getItem('device_token');
     if (!token) {
-      navigate('/');
+      navigate(activeOrg?.slug ? `/start/${activeOrg.slug}` : '/');
       return;
     }
     setDeviceToken(token);
@@ -48,7 +48,7 @@ export default function Reward() {
       .catch(err => {
         setLoading(false);
       });
-  }, [navigate]);
+  }, [navigate, activeOrg]);
 
   if (loading) {
     return (

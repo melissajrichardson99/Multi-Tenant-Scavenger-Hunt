@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import { apiClient } from '../api/client';
+import { useOrgTheme } from '../theme';
 
 const QR_REGION_ID = 'qr-reader-region';
 
@@ -25,6 +26,7 @@ const REASON_MESSAGES = {
 
 export default function Scan() {
   const navigate = useNavigate();
+  const { activeOrg } = useOrgTheme();
   const [deviceToken, setDeviceToken] = useState('');
   const [manualCode, setManualCode] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
@@ -40,11 +42,11 @@ export default function Scan() {
     if (!token) {
       setStatusMsg('No session found. Redirecting to home...');
       setStatusType('error');
-      setTimeout(() => navigate('/'), 2000);
+      setTimeout(() => navigate(activeOrg?.slug ? `/start/${activeOrg.slug}` : '/'), 2000);
     } else {
       setDeviceToken(token);
     }
-  }, [navigate]);
+  }, [navigate, activeOrg]);
 
   const resumeCamera = () => {
     const scanner = html5QrcodeRef.current;

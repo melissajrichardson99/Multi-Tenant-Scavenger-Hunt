@@ -11,20 +11,14 @@ export default function Start() {
   const [hunt, setHunt] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [healthStatus, setHealthStatus] = useState(null);
   const [hasValidSession, setHasValidSession] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
     async function initialize() {
-      // 1. Check API health (fire-and-forget, non-blocking)
-      apiClient.checkHealth()
-        .then(status => { if (!cancelled) setHealthStatus(status); })
-        .catch(() => { if (!cancelled) setHealthStatus({ status: 'offline', database: 'error' }); });
-
       try {
-        // 2. Fetch hunt info
+        // 1. Fetch hunt info
         const huntData = await apiClient.getHunt(orgSlug);
         if (cancelled) return;
         setHunt(huntData);
@@ -41,7 +35,7 @@ export default function Start() {
           theme_mode: huntData.organization?.theme_mode,
         });
 
-        // 3. Validate existing session from localStorage
+        // 2. Validate existing session from localStorage
         const storedToken = localStorage.getItem('device_token');
         if (storedToken) {
           try {
@@ -94,22 +88,6 @@ export default function Start() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1rem' }}>
-
-      {/* API Connection Health Check Indicator */}
-      <div className="card" style={{ padding: '0.75rem 1rem', fontSize: '0.85rem', borderColor: healthStatus?.status === 'ok' ? '#02c39a' : '#ff5a5f' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>Backend Health Check:</span>
-          <strong>
-            {healthStatus ? (
-              <span style={{ color: healthStatus.status === 'ok' ? '#02c39a' : '#ff5a5f' }}>
-                {healthStatus.status.toUpperCase()} (DB: {healthStatus.database})
-              </span>
-            ) : (
-              'Checking...'
-            )}
-          </strong>
-        </div>
-      </div>
 
       {error ? (
         <div className="card" style={{ borderColor: 'var(--danger-color)' }}>

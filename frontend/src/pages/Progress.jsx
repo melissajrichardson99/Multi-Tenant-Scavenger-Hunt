@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../api/client';
+import { useOrgTheme } from '../theme';
 
 export default function Progress() {
   const navigate = useNavigate();
+  const { activeOrg } = useOrgTheme();
   const [loading, setLoading] = useState(true);
   const [deviceToken, setDeviceToken] = useState('');
   const [progress, setProgress] = useState(null);
@@ -12,7 +14,7 @@ export default function Progress() {
   useEffect(() => {
     const token = localStorage.getItem('device_token');
     if (!token) {
-      navigate('/');
+      navigate(activeOrg?.slug ? `/start/${activeOrg.slug}` : '/');
       return;
     }
     setDeviceToken(token);
@@ -26,7 +28,7 @@ export default function Progress() {
         setError(err.message || 'Failed to load progress.');
         setLoading(false);
       });
-  }, [navigate]);
+  }, [navigate, activeOrg]);
 
   if (loading) {
     return (
@@ -110,7 +112,7 @@ export default function Progress() {
 
       {/* Quick links */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '1rem' }}>
-        <button className="btn btn-secondary" style={{ width: 'auto', fontSize: '0.85rem' }} onClick={() => navigate('/')}>
+        <button className="btn btn-secondary" style={{ width: 'auto', fontSize: '0.85rem' }} onClick={() => navigate(activeOrg?.slug ? `/start/${activeOrg.slug}` : '/')}>
           🏠 Back to Home
         </button>
         <button className="btn btn-secondary" style={{ width: 'auto', fontSize: '0.85rem' }} onClick={() => navigate('/reward')}>
