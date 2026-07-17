@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas';
 import { apiClient } from '../api/client';
+import { useOrgTheme } from '../theme';
+import CompletionCard from '../components/CompletionCard';
 
 function downloadBlob(blob, fileName) {
   const url = URL.createObjectURL(blob);
@@ -17,6 +19,7 @@ function downloadBlob(blob, fileName) {
 export default function Reward() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { activeOrg } = useOrgTheme();
   const [deviceToken, setDeviceToken] = useState('');
   const [progress, setProgress] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -63,7 +66,7 @@ export default function Reward() {
 
     try {
       const canvas = await html2canvas(cardCaptureRef.current, {
-        backgroundColor: '#151515',
+        backgroundColor: null,
         scale: 2,
         useCORS: true,
       });
@@ -106,65 +109,15 @@ export default function Reward() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1rem' }}>
       
       {isCompleted ? (
-        <div className="completion-card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-          <div ref={cardCaptureRef} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-
-            <div style={{ fontSize: '3.5rem' }}>🏆</div>
-
-            <h1 style={{ color: 'var(--secondary-color)', fontSize: '2.25rem', marginBottom: '0.25rem' }}>
-              HUNT COMPLETED!
-            </h1>
-
-            <p style={{ color: 'var(--text-secondary)', fontSize: '1rem', fontStyle: 'italic' }}>
-              Official Scavenger Explorer
-            </p>
-
-            <div style={{
-              borderTop: '1px solid var(--card-border)',
-              borderBottom: '1px solid var(--card-border)',
-              padding: '1.5rem 0',
-              margin: '0.5rem 0'
-            }}>
-              <h3 style={{ color: 'var(--success-color)' }}>Congratulations!</h3>
-              <p style={{ fontSize: '0.95rem', lineHeight: '1.5', marginTop: '0.5rem' }}>
-                You found all <strong>{progress.total_characters}</strong> characters hidden around Cobb's Adventure Park!
-              </p>
-            </div>
-
-            {unlockedRewards.length > 0 && (
-              <div style={{
-                background: 'rgba(0,168,150,0.15)',
-                border: '1px solid var(--success-color)',
-                borderRadius: 'var(--radius-sm)',
-                padding: '1rem',
-                textAlign: 'left'
-              }}>
-                {unlockedRewards.map((reward, idx) => (
-                  <div key={idx} style={{ marginBottom: idx < unlockedRewards.length - 1 ? '0.75rem' : 0 }}>
-                    <p style={{ margin: 0 }}>{reward.reward_description}</p>
-                    {reward.reward_code && (
-                      <p style={{ fontFamily: 'monospace', fontWeight: '700', margin: '0.25rem 0 0 0' }}>
-                        Code: {reward.reward_code}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Shareable card detail */}
-            <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(255,255,255,0.05)', fontSize: '0.9rem' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Explorer Token:</span>
-              <div style={{ fontFamily: 'monospace', fontWeight: 'bold', margin: '4px 0', fontSize: '0.8rem' }}>
-                {deviceToken.substring(0, 16)}...
-              </div>
-              <p style={{ fontSize: '0.8rem', color: 'var(--secondary-color)' }}>
-                Show this screen to the main counter to claim your badge!
-              </p>
-            </div>
-
-          </div>
+          <CompletionCard
+            ref={cardCaptureRef}
+            org={activeOrg}
+            progress={progress}
+            deviceToken={deviceToken}
+            unlockedRewards={unlockedRewards}
+          />
 
           <button className="btn btn-primary" onClick={handleShare} disabled={sharing}>
             {sharing ? 'Preparing image...' : 'Share completion card!'}

@@ -388,27 +388,3 @@ input:focus, select:focus, textarea:focus {
   align-items: center;
   justify-content: center;
 }
-
-/* Reward Completion Card styling */
-.completion-card {
-  background: linear-gradient(135deg, #111 0%, #222 100%);
-  border: 2px solid var(--secondary-color);
-  border-radius: var(--radius-lg);
-  padding: 2rem;
-  text-align: center;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.8);
-  position: relative;
-}
-
-.completion-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: var(--radius-lg);
-  padding: 2px;
-  background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
