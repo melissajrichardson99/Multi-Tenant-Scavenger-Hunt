@@ -112,7 +112,7 @@ export default function Reward() {
 
             <div style={{ fontSize: '3.5rem' }}>🏆</div>
 
-            <h1 style={{ color: 'var(--primary-color)', fontSize: '2.25rem', marginBottom: '0.25rem' }}>
+            <h1 style={{ color: 'var(--secondary-color)', fontSize: '2.25rem', marginBottom: '0.25rem' }}>
               HUNT COMPLETED!
             </h1>
 
@@ -159,7 +159,7 @@ export default function Reward() {
               <div style={{ fontFamily: 'monospace', fontWeight: 'bold', margin: '4px 0', fontSize: '0.8rem' }}>
                 {deviceToken.substring(0, 16)}...
               </div>
-              <p style={{ fontSize: '0.8rem', color: 'var(--primary-color)' }}>
+              <p style={{ fontSize: '0.8rem', color: 'var(--secondary-color)' }}>
                 Show this screen to the main counter to claim your badge!
               </p>
             </div>

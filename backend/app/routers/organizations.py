@@ -13,6 +13,7 @@ def _serialize_organization(org: Organization) -> dict:
         "slug": org.slug,
         "theme_primary": org.theme_primary,
         "theme_secondary": org.theme_secondary,
+        "theme_mode": org.theme_mode,
         "logo_url": org.logo_url,
     }
 
@@ -40,6 +41,7 @@ def create_organization(payload: dict, db: Session = Depends(get_db), admin: Adm
         slug=slug,
         theme_primary=payload.get("theme_primary", "#000000"),
         theme_secondary=payload.get("theme_secondary", "#ffffff"),
+        theme_mode=payload.get("theme_mode", "dark"),
         logo_url=payload.get("logo_url"),
     )
     db.add(organization)
@@ -61,7 +63,7 @@ def update_organization(payload: dict, db: Session = Depends(get_db), admin: Adm
     if not organization:
         raise HTTPException(status_code=404, detail="Organization not found")
 
-    for field in ("name", "slug", "theme_primary", "theme_secondary", "logo_url"):
+    for field in ("name", "slug", "theme_primary", "theme_secondary", "theme_mode", "logo_url"):
         if field in payload:
             setattr(organization, field, payload[field])
 

@@ -23,12 +23,18 @@ class Organization(Base):
     slug = Column(String, unique=True, nullable=False)
     theme_primary = Column(String, default="#000000", server_default="#000000")
     theme_secondary = Column(String, default="#ffffff", server_default="#ffffff")
+    theme_mode = Column(String, nullable=False, default="dark", server_default="dark")
     logo_url = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), default=func.now(), server_default=func.now())
 
     # Relationships
     hunts = relationship("Hunt", back_populates="organization", cascade="all, delete-orphan")
     admin_users = relationship("AdminUser", back_populates="organization")
+
+    # Constraints
+    __table_args__ = (
+        CheckConstraint(theme_mode.in_(["light", "dark"]), name="ck_organizations_theme_mode"),
+    )
 
 
 class Hunt(Base):

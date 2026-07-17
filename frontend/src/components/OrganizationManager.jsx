@@ -6,6 +6,7 @@ const EMPTY_FORM = {
   slug: '',
   theme_primary: '#000000',
   theme_secondary: '#ffffff',
+  theme_mode: 'dark',
   logo_url: '',
 };
 
@@ -33,6 +34,7 @@ export default function OrganizationManager({ organizations, loadingOrganization
       slug: org.slug || '',
       theme_primary: org.theme_primary || '#000000',
       theme_secondary: org.theme_secondary || '#ffffff',
+      theme_mode: org.theme_mode || 'dark',
       logo_url: org.logo_url || '',
     });
     setError('');
@@ -57,6 +59,7 @@ export default function OrganizationManager({ organizations, loadingOrganization
           slug: formData.slug,
           theme_primary: formData.theme_primary,
           theme_secondary: formData.theme_secondary,
+          theme_mode: formData.theme_mode,
           logo_url: formData.logo_url,
         });
       } else {
@@ -65,6 +68,7 @@ export default function OrganizationManager({ organizations, loadingOrganization
           slug: formData.slug,
           theme_primary: formData.theme_primary,
           theme_secondary: formData.theme_secondary,
+          theme_mode: formData.theme_mode,
           logo_url: formData.logo_url,
         });
       }
@@ -130,6 +134,17 @@ export default function OrganizationManager({ organizations, loadingOrganization
             />
           </div>
 
+          <div className="form-group">
+            <label>Theme Mode</label>
+            <select
+              value={formData.theme_mode}
+              onChange={e => setFormData({ ...formData, theme_mode: e.target.value })}
+            >
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+            </select>
+          </div>
+
           <div className="grid grid-cols-2">
             <div className="form-group">
               <label>Primary Color</label>
@@ -189,6 +204,7 @@ export default function OrganizationManager({ organizations, loadingOrganization
                 <th style={{ padding: '0.5rem' }}>Name</th>
                 <th style={{ padding: '0.5rem' }}>Slug</th>
                 <th style={{ padding: '0.5rem' }}>Theme</th>
+                <th style={{ padding: '0.5rem' }}>Mode</th>
                 <th style={{ padding: '0.5rem' }}>Actions</th>
               </tr>
             </thead>
@@ -203,6 +219,7 @@ export default function OrganizationManager({ organizations, loadingOrganization
                       <span style={{ width: '18px', height: '18px', borderRadius: '4px', display: 'inline-block', background: org.theme_secondary, border: '1px solid var(--card-border)' }} title={org.theme_secondary} />
                     </div>
                   </td>
+                  <td style={{ padding: '0.5rem' }}>{org.theme_mode || 'dark'}</td>
                   <td style={{ padding: '0.5rem' }}>
                     <button
                       className="btn btn-secondary"

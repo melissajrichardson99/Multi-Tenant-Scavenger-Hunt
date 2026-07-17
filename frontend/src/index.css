@@ -62,7 +62,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 a {
-  color: var(--primary-color);
+  color: var(--secondary-color);
   text-decoration: none;
   transition: var(--transition-smooth);
 }
@@ -79,6 +79,7 @@ a:hover {
   max-width: 480px; /* Mobile first feel */
   margin: 0 auto;
   background: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
   box-shadow: 0 0 40px rgba(0,0,0,0.6);
   border-left: 1px solid var(--card-border);
   border-right: 1px solid var(--card-border);
@@ -91,6 +92,18 @@ a:hover {
   border: none;
   background: transparent;
   box-shadow: none;
+}
+
+/* Org-branded page background — a subtle gradient built from the org's
+   primary color, scoped to `.org-themed` so HuntSelector/no-org states keep
+   the generic dark background above instead of inheriting the root
+   --primary-color default. */
+.app-container.org-themed {
+  background: linear-gradient(160deg, var(--primary-color) 0%, color-mix(in srgb, var(--primary-color) 100%, black 45%) 100%);
+}
+
+.app-container.org-themed.theme-light {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--primary-color) 100%, white 20%) 0%, var(--primary-color) 100%);
 }
 
 header {
@@ -109,9 +122,17 @@ header {
 header h1 {
   font-size: 1.25rem;
   margin-bottom: 0;
-  background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+  background: linear-gradient(90deg, var(--secondary-color), var(--accent-color));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+/* Light org themes get a header that matches the light card surface instead
+   of the app's default dark glass bar, so it doesn't read as a mismatched
+   dark strip above the light page background. */
+.theme-light header {
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--card-border);
 }
 
 .logo {
@@ -172,13 +193,14 @@ footer {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--primary-color) 0%, #d4760d 100%);
-  color: #000000;
+  background: linear-gradient(135deg, var(--secondary-color) 0%, color-mix(in srgb, var(--secondary-color) 100%, black 25%) 100%);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 6px 20px rgba(247, 147, 30, 0.4);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--secondary-color) 40%, transparent);
 }
 
 .btn-secondary {
@@ -223,8 +245,9 @@ footer {
 }
 
 .nav-tab.active {
-  background: var(--primary-color);
-  color: #000;
+  background: var(--secondary-color);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
 /* Form Styles */
@@ -255,8 +278,8 @@ input, select, textarea {
 
 input:focus, select:focus, textarea:focus {
   outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(247, 147, 30, 0.2);
+  border-color: var(--secondary-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--secondary-color) 20%, transparent);
 }
 
 /* Grid & Layout Helpers */
@@ -335,6 +358,7 @@ input:focus, select:focus, textarea:focus {
   left: 0;
   right: 0;
   background: linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0));
+  color: #ffffff;
   padding: 8px;
   font-size: 0.8rem;
   font-weight: 600;
@@ -357,7 +381,7 @@ input:focus, select:focus, textarea:focus {
   aspect-ratio: 1;
   background: #000;
   border-radius: var(--radius-md);
-  border: 2px dashed var(--primary-color);
+  border: 2px dashed var(--secondary-color);
   overflow: hidden;
   position: relative;
   display: flex;
@@ -368,7 +392,7 @@ input:focus, select:focus, textarea:focus {
 /* Reward Completion Card styling */
 .completion-card {
   background: linear-gradient(135deg, #111 0%, #222 100%);
-  border: 2px solid var(--primary-color);
+  border: 2px solid var(--secondary-color);
   border-radius: var(--radius-lg);
   padding: 2rem;
   text-align: center;
@@ -382,7 +406,7 @@ input:focus, select:focus, textarea:focus {
   inset: 0;
   border-radius: var(--radius-lg);
   padding: 2px;
-  background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+  background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;

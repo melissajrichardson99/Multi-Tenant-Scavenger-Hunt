@@ -7,14 +7,18 @@ import Progress from './pages/Progress';
 import CharacterReveal from './pages/CharacterReveal';
 import Reward from './pages/Reward';
 import Admin from './pages/Admin';
+import Header from './components/Header';
+import { OrgThemeProvider } from './theme';
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Admin layout is separate and wider, but gameplay is wrapped in mobile-first viewport */}
-        <Route 
-          path="/admin" 
+        {/* Admin layout is separate and wider, and intentionally never wrapped in
+            OrgThemeProvider — its styling stays generic regardless of which hunt
+            is selected in its dropdown. */}
+        <Route
+          path="/admin"
           element={
             <div className="app-container admin-layout" style={{ padding: '2rem' }}>
               <div style={{ marginBottom: '1rem' }}>
@@ -24,27 +28,15 @@ export default function App() {
               </div>
               <Admin />
             </div>
-          } 
+          }
         />
-        
+
         {/* Public Mobile-First Gameplay Layout */}
         <Route
           path="*"
           element={
-            <div className="app-container">
-              <header>
-                <Link to="/">
-                  <h1>Cobb's Hunt</h1>
-                </Link>
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                  <Link to="/progress" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                    Gallery
-                  </Link>
-                  <Link to="/admin" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                    Admin
-                  </Link>
-                </div>
-              </header>
+            <OrgThemeProvider>
+              <Header />
 
               <main>
                 <Routes>
@@ -65,7 +57,7 @@ export default function App() {
                   Multi-tenant Scavenger Hunt System
                 </div>
               </footer>
-            </div>
+            </OrgThemeProvider>
           }
         />
       </Routes>

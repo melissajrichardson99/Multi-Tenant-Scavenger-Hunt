@@ -1,11 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiClient } from '../api/client';
+import { useOrgTheme } from '../theme';
 
 export default function HuntSelector() {
   const [hunts, setHunts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { clearActiveOrg } = useOrgTheme();
+
+  // A guest lands back here between hunts (or to pick a different org
+  // entirely) — reset branding immediately so the selector itself, and
+  // whichever hunt they pick next, never inherit a stale org's theme.
+  useEffect(() => {
+    clearActiveOrg();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     let cancelled = false;

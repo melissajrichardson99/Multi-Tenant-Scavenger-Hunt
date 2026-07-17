@@ -61,7 +61,7 @@ export default function CharacterReveal() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1rem' }}>
 
-      <div className="card" style={{ textAlign: 'center', borderColor: isRevisit ? 'var(--primary-color)' : 'var(--success-color)' }}>
+      <div className="card" style={{ textAlign: 'center', borderColor: isRevisit ? 'var(--secondary-color)' : 'var(--success-color)' }}>
         {isRevisit ? (
           <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: '600', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
             YOU FOUND THIS CHARACTER
@@ -72,7 +72,7 @@ export default function CharacterReveal() {
           </div>
         )}
 
-        <h1 style={{ fontSize: '2.25rem', color: 'var(--primary-color)', marginBottom: '1rem' }}>
+        <h1 style={{ fontSize: '2.25rem', color: 'var(--secondary-color)', marginBottom: '1rem' }}>
           {character.name}
         </h1>
 
@@ -81,7 +81,7 @@ export default function CharacterReveal() {
           width: '200px',
           height: '200px',
           borderRadius: '50%',
-          border: '4px solid var(--primary-color)',
+          border: '4px solid var(--secondary-color)',
           margin: '0 auto 1.5rem auto',
           overflow: 'hidden',
           background: 'rgba(255,255,255,0.05)',
@@ -119,7 +119,7 @@ export default function CharacterReveal() {
           background: 'rgba(0,0,0,0.2)',
           padding: '1.25rem',
           borderRadius: 'var(--radius-sm)',
-          borderLeft: '4px solid var(--primary-color)',
+          borderLeft: '4px solid var(--secondary-color)',
           marginBottom: '1.5rem'
         }}>
           {character.description}

@@ -47,7 +47,7 @@ export default function Progress() {
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
           <h3>Hunt Progress</h3>
-          <span style={{ fontWeight: '700', color: 'var(--primary-color)' }}>
+          <span style={{ fontWeight: '700', color: 'var(--secondary-color)' }}>
             {progress?.total_found} / {progress?.total_characters} Found
           </span>
         </div>
@@ -55,7 +55,7 @@ export default function Progress() {
         {/* Progress Bar */}
         <div style={{ background: 'rgba(255,255,255,0.1)', height: '12px', borderRadius: '6px', overflow: 'hidden', marginBottom: '1.5rem' }}>
           <div style={{ 
-            background: 'linear-gradient(90deg, var(--primary-color), var(--success-color))', 
+            background: 'linear-gradient(90deg, var(--secondary-color), var(--success-color))',
             height: '100%', 
             width: `${completionPercent}%`,
             transition: 'width 0.5s ease-out'

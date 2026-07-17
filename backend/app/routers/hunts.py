@@ -34,6 +34,7 @@ def list_active_hunts(db: Session = Depends(get_db)):
                 "slug": organization.slug,
                 "theme_primary": organization.theme_primary,
                 "theme_secondary": organization.theme_secondary,
+                "theme_mode": organization.theme_mode,
                 "logo_url": organization.logo_url,
             },
             "total_characters": character_counts.get(hunt.id, 0),
@@ -64,7 +65,10 @@ def get_public_hunt(slug: str, db: Session = Depends(get_db)):
         "name": hunt.name,
         "organization": {
             "name": organization.name,
+            "slug": organization.slug,
             "theme_primary": organization.theme_primary,
+            "theme_secondary": organization.theme_secondary,
+            "theme_mode": organization.theme_mode,
             "logo_url": organization.logo_url,
         },
         "total_characters": total_characters,

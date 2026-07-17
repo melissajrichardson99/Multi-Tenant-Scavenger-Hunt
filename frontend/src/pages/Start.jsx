@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiClient } from '../api/client';
+import { useOrgTheme } from '../theme';
 
 export default function Start() {
   const { orgSlug } = useParams();
   const navigate = useNavigate();
+  const { setActiveOrg } = useOrgTheme();
 
   const [hunt, setHunt] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -26,6 +28,18 @@ export default function Start() {
         const huntData = await apiClient.getHunt(orgSlug);
         if (cancelled) return;
         setHunt(huntData);
+
+        // Store this org's branding so it can be applied on this and every
+        // other hunt-specific guest page; overwrites whatever the previous
+        // hunt (if any) had left behind so theming never leaks across orgs.
+        setActiveOrg({
+          name: huntData.organization?.name,
+          slug: huntData.organization?.slug || orgSlug,
+          logo_url: huntData.organization?.logo_url,
+          theme_primary: huntData.organization?.theme_primary,
+          theme_secondary: huntData.organization?.theme_secondary,
+          theme_mode: huntData.organization?.theme_mode,
+        });
 
         // 3. Validate existing session from localStorage
         const storedToken = localStorage.getItem('device_token');
@@ -50,7 +64,7 @@ export default function Start() {
 
     initialize();
     return () => { cancelled = true; };
-  }, [orgSlug]);
+  }, [orgSlug, setActiveOrg]);
 
   const handleStartHunt = async () => {
     if (!hunt) return;
@@ -104,7 +118,7 @@ export default function Start() {
         </div>
       ) : (
         <div className="card" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <h1 style={{ fontSize: '2rem', color: 'var(--primary-color)' }}>
+          <h1 style={{ fontSize: '2rem', color: 'var(--secondary-color)' }}>
             {hunt?.name}
           </h1>
 
