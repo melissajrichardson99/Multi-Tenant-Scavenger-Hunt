@@ -142,7 +142,7 @@ export default function CharacterReveal() {
             textAlign: 'left'
           }}>
             <div style={{ fontWeight: '700', color: 'var(--success-color)', marginBottom: '0.5rem' }}>
-              🎁 Reward Unlocked!
+              🏅 Badge Unlocked!
             </div>
             {unlockedRewards.map((reward, idx) => (
               <div key={idx} style={{ marginBottom: idx < unlockedRewards.length - 1 ? '0.75rem' : 0 }}>
@@ -164,7 +164,7 @@ export default function CharacterReveal() {
             </button>
           ) : isHuntComplete ? (
             <button className="btn btn-primary" onClick={() => navigate('/reward', { state: { unlockedRewards } })}>
-              🏆 Claim My Reward
+              🏆 Claim My Badge
             </button>
           ) : (
             <button className="btn btn-primary" onClick={() => navigate('/progress')}>

@@ -71,7 +71,7 @@ export default function Progress() {
           
           {completionPercent >= 100 && (
             <button className="btn btn-secondary" style={{ borderColor: 'var(--success-color)' }} onClick={() => navigate('/reward')}>
-              🏆 Claim Reward
+              🎖️ Claim My Badge
             </button>
           )}
         </div>
@@ -116,7 +116,7 @@ export default function Progress() {
           🏠 Back to Home
         </button>
         <button className="btn btn-secondary" style={{ width: 'auto', fontSize: '0.85rem' }} onClick={() => navigate('/reward')}>
-          🎁 Rewards Screen
+          🎖️ My Badge
         </button>
       </div>
 

@@ -69,7 +69,6 @@ export default function HuntSelector() {
                 gap: '1rem',
                 textDecoration: 'none',
                 color: 'inherit',
-                borderColor: hunt.organization.theme_primary || 'var(--card-border)',
               }}
             >
               {hunt.organization.logo_url && (

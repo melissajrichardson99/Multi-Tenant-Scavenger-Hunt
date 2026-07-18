@@ -27,7 +27,7 @@ export default function Reward() {
   const cardCaptureRef = useRef(null);
 
   // Only populated when arriving straight from CharacterReveal's "Claim My
-  // Reward" button on the scan that completed the hunt — reward_description/
+  // Badge" button on the scan that completed the hunt — reward_description/
   // reward_code aren't persisted anywhere the API can hand back later, so a
   // direct nav or refresh here just shows the generic completion card below.
   const unlockedRewards = location.state?.unlockedRewards || [];
@@ -53,7 +53,7 @@ export default function Reward() {
   if (loading) {
     return (
       <div className="card pulse" style={{ textAlign: 'center', marginTop: '2rem' }}>
-        <h2>Loading Rewards Status...</h2>
+        <h2>Loading Badge Status...</h2>
       </div>
     );
   }
@@ -130,8 +130,8 @@ export default function Reward() {
       ) : (
         <div className="card" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div style={{ fontSize: '3rem' }}>🔒</div>
-          <h2>Reward Locked</h2>
-          
+          <h2>Badge Locked</h2>
+
           <p style={{ color: 'var(--text-secondary)', lineHeight: '1.6' }}>
             You have scanned <strong>{progress?.total_found || 0}</strong> of <strong>{progress?.total_characters || 10}</strong> characters.
             Keep scanning to hit 100% completion and unlock your official explorer completion card!

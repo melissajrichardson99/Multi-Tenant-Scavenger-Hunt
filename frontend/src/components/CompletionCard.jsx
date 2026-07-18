@@ -68,7 +68,6 @@ const CompletionCard = forwardRef(function CompletionCard(
   const textColor = isDark ? '#ffffff' : '#1a1a1a';
   const mutedTextColor = isDark ? 'rgba(255,255,255,0.7)' : 'rgba(26,26,26,0.65)';
   const dividerColor = isDark ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.12)';
-  const tokenBoxBg = isDark ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.05)';
   const headingColor = ensureContrast(secondary, isDark);
   const successColor = '#02c39a';
 
@@ -159,9 +158,8 @@ const CompletionCard = forwardRef(function CompletionCard(
         <div
           style={{
             borderTop: `1px solid ${dividerColor}`,
-            borderBottom: `1px solid ${dividerColor}`,
-            padding: '1.5rem 0',
-            margin: '1rem 0',
+            padding: '1.5rem 0 0',
+            margin: '1rem 0 0',
           }}
         >
           <h3 style={{ color: successColor }}>Congratulations!</h3>
@@ -193,25 +191,6 @@ const CompletionCard = forwardRef(function CompletionCard(
             ))}
           </div>
         )}
-
-        <div
-          style={{
-            background: tokenBoxBg,
-            padding: '1rem',
-            borderRadius: 12,
-            border: `1px solid ${dividerColor}`,
-            fontSize: '0.9rem',
-            marginTop: '1.25rem',
-          }}
-        >
-          <span style={{ color: mutedTextColor }}>Explorer Token:</span>
-          <div style={{ fontFamily: 'monospace', fontWeight: 'bold', margin: '4px 0', fontSize: '0.8rem', color: textColor }}>
-            {deviceToken.substring(0, 16)}...
-          </div>
-          <p style={{ fontSize: '0.8rem', color: headingColor }}>
-            Show this screen to the main counter to claim your badge!
-          </p>
-        </div>
       </div>
     </div>
   );
