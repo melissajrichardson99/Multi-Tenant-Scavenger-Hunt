@@ -20,14 +20,6 @@ export default function Header() {
           <h1>Scavenger Hunt</h1>
         )}
       </Link>
-      <div style={{ display: 'flex', gap: '0.75rem' }}>
-        <Link to="/progress" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-          Gallery
-        </Link>
-        <Link to="/admin" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-          Admin
-        </Link>
-      </div>
     </header>
   );
 }

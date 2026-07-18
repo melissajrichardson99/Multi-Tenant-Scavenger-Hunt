@@ -94,6 +94,12 @@ export default function HuntSelector() {
           ))}
         </div>
       )}
+
+      <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+        <Link to="/admin" style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+          Staff Login
+        </Link>
+      </div>
     </div>
   );
 }
