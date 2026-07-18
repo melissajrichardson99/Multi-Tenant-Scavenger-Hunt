@@ -8,6 +8,7 @@ import CharacterReveal from './pages/CharacterReveal';
 import Reward from './pages/Reward';
 import Admin from './pages/Admin';
 import Header from './components/Header';
+import Footer from './components/Footer';
 import { OrgThemeProvider } from './theme';
 
 export default function App() {
@@ -51,12 +52,7 @@ export default function App() {
                 </Routes>
               </main>
 
-              <footer>
-                <div>© 2026 Cobb's Adventure Park</div>
-                <div style={{ fontSize: '0.75rem', marginTop: '4px', color: 'var(--text-muted)' }}>
-                  Multi-tenant Scavenger Hunt System
-                </div>
-              </footer>
+              <Footer />
             </OrgThemeProvider>
           }
         />
