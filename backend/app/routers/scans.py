@@ -4,6 +4,7 @@ from sqlalchemy import func, and_, or_
 from sqlalchemy.exc import IntegrityError
 from ..database import get_db
 from ..models import PlayerSession, Character, Scan, RewardTier
+from ..qr_codes import normalize_code
 
 router = APIRouter(prefix="/api/scans", tags=["Scans"])
 
@@ -26,10 +27,11 @@ def record_scan(payload: dict, db: DBSession = Depends(get_db)):
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
+    normalized_code = normalize_code(qr_code_value)
     character = (
         db.query(Character)
         .filter(
-            Character.qr_code_value == qr_code_value,
+            func.upper(func.replace(Character.qr_code_value, "-", "")) == normalized_code,
             Character.hunt_id == session.hunt_id,
         )
         .first()

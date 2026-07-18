@@ -171,7 +171,7 @@ export default function Scan() {
         <div className="form-group">
           <input
             type="text"
-            placeholder="e.g. cobb-kangaroo-01"
+            placeholder="e.g. K7XQ-2M9P-T4RN"
             value={manualCode}
             onChange={(e) => setManualCode(e.target.value)}
             disabled={loading}

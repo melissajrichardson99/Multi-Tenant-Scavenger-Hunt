@@ -1,18 +1,10 @@
 import uuid
-import os
-from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session as DBSession
 from ..database import get_db
 from ..models import Character, PlayerSession, Scan, AdminUser
 from ..auth import get_current_admin
-
-try:
-    import qrcode
-    from qrcode.image.pure import PyPNGImage
-    QR_AVAILABLE = True
-except ImportError:
-    QR_AVAILABLE = False
+from ..qr_codes import QR_CODES_DIR, generate_unique_qr_code, generate_qr_image
 
 router = APIRouter(prefix="/api/admin/characters", tags=["Admin Characters"])
 public_router = APIRouter(prefix="/api/characters", tags=["Characters"])
@@ -63,28 +55,6 @@ def get_character_detail(character_id: str, device_token: str, db: DBSession = D
         "points": character.points,
     }
 
-# Directory where QR code images are stored (relative to project root).
-# main.py creates this directory on startup and mounts it as static files.
-QR_CODES_DIR = Path(__file__).resolve().parents[3] / "qr_codes"
-
-
-def _generate_qr_image(qr_code_value: str) -> str:
-    """
-    Generate a QR code PNG encoding the scan URL and save it to
-    qr_codes/{qr_code_value}.png.  Returns the filename (not the full path).
-    """
-    if not QR_AVAILABLE:
-        raise RuntimeError("qrcode library is not installed")
-
-    QR_CODES_DIR.mkdir(parents=True, exist_ok=True)
-
-    scan_url = f"http://localhost:3000/scan?code={qr_code_value}"
-    img = qrcode.make(scan_url)
-    filename = f"{qr_code_value}.png"
-    filepath = QR_CODES_DIR / filename
-    img.save(str(filepath))
-    return filename
-
 
 @router.get("")
 def get_admin_characters(hunt_id: str = None, db: DBSession = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
@@ -112,9 +82,9 @@ def get_admin_characters(hunt_id: str = None, db: DBSession = Depends(get_db), a
 @router.post("")
 def create_admin_character(payload: dict, db: DBSession = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
     """
-    Create a new character.  Automatically generates a unique qr_code_value
-    (UUID) and saves a QR code PNG to disk.  Returns the created character
-    including qr_code_image_url.
+    Create a new character.  Automatically generates a unique, human-friendly
+    qr_code_value (e.g. K7XQ-2M9P-T4RN) and saves a QR code PNG to disk.
+    Returns the created character including qr_code_image_url.
     """
     hunt_id = payload.get("hunt_id")
     name = payload.get("name")
@@ -125,11 +95,11 @@ def create_admin_character(payload: dict, db: DBSession = Depends(get_db), admin
         raise HTTPException(status_code=400, detail="name is required")
 
     # Generate a unique QR code value
-    qr_code_value = str(uuid.uuid4())
+    qr_code_value = generate_unique_qr_code(db)
 
     # Generate and persist the QR image
     try:
-        qr_filename = _generate_qr_image(qr_code_value)
+        qr_filename = generate_qr_image(qr_code_value)
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
