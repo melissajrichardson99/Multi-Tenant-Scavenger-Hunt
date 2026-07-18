@@ -67,6 +67,8 @@ class Character(Base):
     points = Column(Integer, default=10, server_default="10")
     qr_code_value = Column(String, unique=True, nullable=False)
     sort_order = Column(Integer, default=0, server_default="0")
+    hint = Column(String, nullable=True)
+    area = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), default=func.now(), server_default=func.now())
 
     # Relationships

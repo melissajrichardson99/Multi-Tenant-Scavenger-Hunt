@@ -34,6 +34,9 @@ def get_progress(device_token: str, db: DBSession = Depends(get_db)):
             "name": character.name if character.id in found_character_ids else "???",
             "found": character.id in found_character_ids,
             "image_url": character.image_url if character.id in found_character_ids else None,
+            "sort_order": character.sort_order,
+            "hint": None if character.id in found_character_ids else character.hint,
+            "area": None if character.id in found_character_ids else character.area,
         }
         for character in characters
     ]

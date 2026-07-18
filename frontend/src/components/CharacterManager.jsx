@@ -7,6 +7,8 @@ const EMPTY_FORM = {
   image_url: '',
   points: 10,
   sort_order: 0,
+  hint: '',
+  area: '',
 };
 
 export default function CharacterManager({ huntId }) {
@@ -58,6 +60,8 @@ export default function CharacterManager({ huntId }) {
       image_url: character.image_url || '',
       points: character.points ?? 10,
       sort_order: character.sort_order ?? 0,
+      hint: character.hint || '',
+      area: character.area || '',
     });
     setError('');
     setShowForm(true);
@@ -80,6 +84,8 @@ export default function CharacterManager({ huntId }) {
         image_url: formData.image_url,
         points: Number(formData.points),
         sort_order: Number(formData.sort_order),
+        hint: formData.hint,
+        area: formData.area,
       };
 
       if (editingId) {
@@ -177,6 +183,25 @@ export default function CharacterManager({ huntId }) {
                 onChange={e => setFormData({ ...formData, sort_order: e.target.value })}
               />
             </div>
+          </div>
+
+          <div className="form-group">
+            <label>Hint (shown to guests before they find this character)</label>
+            <textarea
+              rows={2}
+              value={formData.hint}
+              onChange={e => setFormData({ ...formData, hint: e.target.value })}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Area (optional — enables area grouping on the progress page)</label>
+            <input
+              type="text"
+              placeholder="e.g. Animals, Games"
+              value={formData.area}
+              onChange={e => setFormData({ ...formData, area: e.target.value })}
+            />
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>

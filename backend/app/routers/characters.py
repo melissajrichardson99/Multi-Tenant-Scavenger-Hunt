@@ -73,6 +73,8 @@ def get_admin_characters(hunt_id: str = None, db: DBSession = Depends(get_db), a
             "points": c.points,
             "qr_code_value": c.qr_code_value,
             "sort_order": c.sort_order,
+            "hint": c.hint,
+            "area": c.area,
             "qr_code_image_url": f"/qr_codes/{c.qr_code_value}.png",
         }
         for c in characters
@@ -111,6 +113,8 @@ def create_admin_character(payload: dict, db: DBSession = Depends(get_db), admin
         points=payload.get("points", 10),
         qr_code_value=qr_code_value,
         sort_order=payload.get("sort_order", 0),
+        hint=payload.get("hint"),
+        area=payload.get("area"),
     )
     db.add(character)
     db.commit()
@@ -125,6 +129,8 @@ def create_admin_character(payload: dict, db: DBSession = Depends(get_db), admin
         "points": character.points,
         "qr_code_value": character.qr_code_value,
         "sort_order": character.sort_order,
+        "hint": character.hint,
+        "area": character.area,
         "qr_code_image_url": f"/qr_codes/{qr_filename}",
     }
 
@@ -140,7 +146,7 @@ def update_admin_character(payload: dict, db: DBSession = Depends(get_db), admin
     if not character:
         raise HTTPException(status_code=404, detail="Character not found")
 
-    updatable = ["name", "description", "image_url", "points", "sort_order"]
+    updatable = ["name", "description", "image_url", "points", "sort_order", "hint", "area"]
     for field in updatable:
         if field in payload:
             setattr(character, field, payload[field])
@@ -157,6 +163,8 @@ def update_admin_character(payload: dict, db: DBSession = Depends(get_db), admin
         "points": character.points,
         "qr_code_value": character.qr_code_value,
         "sort_order": character.sort_order,
+        "hint": character.hint,
+        "area": character.area,
         "qr_code_image_url": f"/qr_codes/{character.qr_code_value}.png",
     }
 

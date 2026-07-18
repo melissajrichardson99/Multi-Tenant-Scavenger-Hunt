@@ -3,6 +3,59 @@ import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { useOrgTheme } from '../theme';
 
+function SortBadge({ sortOrder }) {
+  if (sortOrder === null || sortOrder === undefined) return null;
+  return (
+    <div style={{
+      position: 'absolute',
+      top: '8px',
+      left: '8px',
+      background: 'rgba(0,0,0,0.7)',
+      color: '#fff',
+      fontSize: '0.7rem',
+      fontWeight: '700',
+      width: '20px',
+      height: '20px',
+      borderRadius: '50%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1,
+    }}>
+      {sortOrder}
+    </div>
+  );
+}
+
+function CharacterCard({ char, onClick }) {
+  return (
+    <div
+      className={`character-card ${char.found ? 'found' : 'locked'}`}
+      onClick={onClick}
+      style={{ cursor: 'pointer' }}
+    >
+      <SortBadge sortOrder={char.sort_order} />
+      {char.found ? (
+        <>
+          <div className="badge">FOUND</div>
+          {char.image_url ? (
+            <img src={char.image_url} alt={char.name} />
+          ) : (
+            <div style={{ fontSize: '2rem' }}>🦘</div>
+          )}
+          <div className="name">{char.name}</div>
+        </>
+      ) : (
+        <>
+          <div className="badge locked">LOCKED</div>
+          <div style={{ fontSize: '2rem', opacity: 0.3 }}>❓</div>
+          <div className="name">???</div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function Progress() {
   const navigate = useNavigate();
   const { activeOrg } = useOrgTheme();
@@ -10,6 +63,8 @@ export default function Progress() {
   const [deviceToken, setDeviceToken] = useState('');
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState('');
+  const [hintCharacter, setHintCharacter] = useState(null);
+  const [expandedAreas, setExpandedAreas] = useState(() => new Set());
 
   useEffect(() => {
     const token = localStorage.getItem('device_token');
@@ -38,9 +93,43 @@ export default function Progress() {
     );
   }
 
-  const completionPercent = progress 
-    ? Math.round((progress.total_found / progress.total_characters) * 100) 
+  const completionPercent = progress
+    ? Math.round((progress.total_found / progress.total_characters) * 100)
     : 0;
+
+  const handleCardClick = (char) => {
+    if (char.found) {
+      navigate(`/reveal/${char.id}`);
+    } else {
+      setHintCharacter(char);
+    }
+  };
+
+  const toggleArea = (areaName) => {
+    setExpandedAreas(prev => {
+      const next = new Set(prev);
+      if (next.has(areaName)) {
+        next.delete(areaName);
+      } else {
+        next.add(areaName);
+      }
+      return next;
+    });
+  };
+
+  const characters = progress?.characters || [];
+  const hasAreas = characters.some(c => c.area);
+  const foundCharacters = characters.filter(c => c.found);
+  const lockedCharacters = characters.filter(c => !c.found);
+
+  const lockedByArea = hasAreas
+    ? lockedCharacters.reduce((groups, char) => {
+        const key = char.area || 'Other';
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(char);
+        return groups;
+      }, {})
+    : null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -78,37 +167,92 @@ export default function Progress() {
       </div>
 
       {/* Grid of Characters */}
-      <div>
-        <h3 style={{ marginBottom: '1rem' }}>Characters Gallery</h3>
-        <div className="character-grid">
-          {progress?.characters.map((char) => (
-            <div 
-              key={char.id} 
-              className={`character-card ${char.found ? 'found' : 'locked'}`}
-              onClick={() => char.found && navigate(`/reveal/${char.id}`)}
-              style={{ cursor: char.found ? 'pointer' : 'default' }}
-            >
-              {char.found ? (
-                <>
-                  <div className="badge">FOUND</div>
-                  {char.image_url ? (
-                    <img src={char.image_url} alt={char.name} />
-                  ) : (
-                    <div style={{ fontSize: '2rem' }}>🦘</div>
-                  )}
-                  <div className="name">{char.name}</div>
-                </>
-              ) : (
-                <>
-                  <div className="badge locked">LOCKED</div>
-                  <div style={{ fontSize: '2rem', opacity: 0.3 }}>❓</div>
-                  <div className="name">???</div>
-                </>
-              )}
+      {hasAreas ? (
+        <>
+          <div>
+            <h3 style={{ marginBottom: '1rem' }}>Characters Found</h3>
+            {foundCharacters.length === 0 ? (
+              <div style={{ color: 'var(--text-muted)' }}>None found yet — get scanning!</div>
+            ) : (
+              <div className="character-grid">
+                {foundCharacters.map((char) => (
+                  <CharacterCard key={char.id} char={char} onClick={() => handleCardClick(char)} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <h3 style={{ marginBottom: '1rem' }}>Still Out There</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {Object.entries(lockedByArea).map(([areaName, areaChars]) => {
+                const isExpanded = expandedAreas.has(areaName);
+                return (
+                  <div key={areaName} className="card" style={{ padding: '1rem' }}>
+                    <div
+                      onClick={() => toggleArea(areaName)}
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+                    >
+                      <span style={{ fontWeight: '600' }}>{areaName}</span>
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                        {areaChars.length} locked {isExpanded ? '▲' : '▼'}
+                      </span>
+                    </div>
+                    {isExpanded && (
+                      <div className="character-grid" style={{ marginTop: '1rem' }}>
+                        {areaChars.map((char) => (
+                          <CharacterCard key={char.id} char={char} onClick={() => handleCardClick(char)} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          ))}
+          </div>
+        </>
+      ) : (
+        <div>
+          <h3 style={{ marginBottom: '1rem' }}>Characters Gallery</h3>
+          <div className="character-grid">
+            {characters.map((char) => (
+              <CharacterCard key={char.id} char={char} onClick={() => handleCardClick(char)} />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Hint Modal */}
+      {hintCharacter && (
+        <div
+          onClick={() => setHintCharacter(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '1.5rem',
+          }}
+        >
+          <div
+            className="card"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '360px', width: '100%', textAlign: 'center' }}
+          >
+            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>❓</div>
+            <h3 style={{ marginBottom: '0.75rem' }}>Hint</h3>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+              {hintCharacter.hint || 'No hint available for this character yet.'}
+            </p>
+            <button className="btn btn-primary" onClick={() => setHintCharacter(null)}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Quick links */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '1rem' }}>
