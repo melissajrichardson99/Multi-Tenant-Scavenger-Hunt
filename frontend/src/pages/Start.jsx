@@ -105,8 +105,8 @@ export default function Start() {
           </div>
 
           <p style={{ lineHeight: '1.6' }}>
-            Find all <strong>{hunt?.total_characters}</strong> hidden QR codes around the park.
-            Scan each one to unlock characters, earn points, and receive special prizes!
+            Find all <strong>{hunt?.total_characters}</strong> hidden QR codes around <strong>{hunt?.organization?.name}</strong>.
+            Scan each one to unlock characters, earn points, and receive a special badge!
           </p>
 
           <div style={{ borderTop: '1px solid var(--card-border)', paddingTop: '1.25rem', marginTop: '0.5rem' }}>
