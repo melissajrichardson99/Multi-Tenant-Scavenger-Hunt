@@ -1,5 +1,6 @@
 /* Design System for Cobb's Scavenger Hunt */
 :root {
+  color-scheme: dark;
   --primary-color: #f7931e; /* Cobb's orange-yellow */
   --secondary-color: #1a1a1a; /* Sleek charcoal */
   --accent-color: #00a896; /* Vibrant teal */
@@ -23,6 +24,7 @@
 
 /* Light theme overrides for organization custom setups if desired */
 .theme-light {
+  color-scheme: light;
   --primary-color: #f7931e;
   --secondary-color: #f0f0f5;
   --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
@@ -73,6 +75,7 @@ a:hover {
 
 /* App Container Layout */
 .app-container {
+  color-scheme: dark;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -84,6 +87,10 @@ a:hover {
   border-left: 1px solid var(--card-border);
   border-right: 1px solid var(--card-border);
   position: relative;
+}
+
+.app-container.theme-light {
+  color-scheme: light;
 }
 
 /* Admin layout might be wider */

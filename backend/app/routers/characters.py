@@ -1,10 +1,11 @@
 import uuid
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session as DBSession
 from ..database import get_db
 from ..models import Character, PlayerSession, Scan, AdminUser
 from ..auth import get_current_admin
 from ..qr_codes import QR_CODES_DIR, generate_unique_qr_code, generate_qr_image
+from ..storage import ALLOWED_IMAGE_CONTENT_TYPES, MAX_UPLOAD_BYTES, upload_character_image
 
 router = APIRouter(prefix="/api/admin/characters", tags=["Admin Characters"])
 public_router = APIRouter(prefix="/api/characters", tags=["Characters"])
@@ -109,6 +110,39 @@ def get_character_trivia(character_id: str, device_token: str, db: DBSession = D
         "trivia_correct_answer": character.trivia_correct_answer,
         "trivia_description": character.trivia_description,
     }
+
+
+@router.post("/upload-image")
+async def upload_admin_character_image(
+    file: UploadFile = File(...),
+    admin: AdminUser = Depends(get_current_admin),
+):
+    """
+    Uploads a character image file to the "character-images" Supabase
+    Storage bucket and returns its public URL, for the admin form to drop
+    into the character's image_url field. Does not touch the database.
+    """
+    if file.content_type not in ALLOWED_IMAGE_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail="File must be an image (JPEG, PNG, GIF, or WEBP).",
+        )
+
+    contents = await file.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+    if len(contents) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=400, detail="Image must be 5MB or smaller.")
+
+    extension = ALLOWED_IMAGE_CONTENT_TYPES[file.content_type]
+    object_name = f"{uuid.uuid4()}{extension}"
+
+    try:
+        image_url = upload_character_image(object_name, file.content_type, contents)
+    except RuntimeError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+    return {"image_url": image_url}
 
 
 @router.get("")

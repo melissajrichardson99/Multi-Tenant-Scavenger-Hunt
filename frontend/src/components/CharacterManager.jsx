@@ -27,6 +27,8 @@ export default function CharacterManager({ huntId }) {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
 
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -56,6 +58,7 @@ export default function CharacterManager({ huntId }) {
     setEditingId(null);
     setFormData(EMPTY_FORM);
     setError('');
+    setUploadError('');
     setShowForm(true);
   };
 
@@ -78,6 +81,7 @@ export default function CharacterManager({ huntId }) {
       trivia_description: character.trivia_description || '',
     });
     setError('');
+    setUploadError('');
     setShowForm(true);
   };
 
@@ -85,6 +89,23 @@ export default function CharacterManager({ huntId }) {
     setShowForm(false);
     setEditingId(null);
     setFormData(EMPTY_FORM);
+    setUploadError('');
+  };
+
+  const handleImageFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadError('');
+    setUploading(true);
+    try {
+      const result = await apiClient.uploadCharacterImage(file);
+      setFormData(prev => ({ ...prev, image_url: result.image_url }));
+    } catch (err) {
+      setUploadError(err.message || 'Failed to upload image.');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -184,6 +205,33 @@ export default function CharacterManager({ huntId }) {
               value={formData.image_url}
               onChange={e => setFormData({ ...formData, image_url: e.target.value })}
             />
+          </div>
+
+          <div className="form-group">
+            <label>Or Upload an Image</label>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              onChange={handleImageFileChange}
+              disabled={uploading}
+            />
+            {uploading && (
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.4rem' }}>
+                Uploading...
+              </div>
+            )}
+            {uploadError && (
+              <div style={{ color: 'var(--danger-color)', fontSize: '0.85rem', marginTop: '0.4rem' }}>
+                {uploadError}
+              </div>
+            )}
+            {formData.image_url && (
+              <img
+                src={formData.image_url}
+                alt="Preview"
+                style={{ width: '64px', height: '64px', objectFit: 'cover', borderRadius: 'var(--radius-sm)', border: '1px solid var(--card-border)', marginTop: '0.6rem' }}
+              />
+            )}
           </div>
 
           <div className="grid grid-cols-2">
@@ -299,7 +347,7 @@ export default function CharacterManager({ huntId }) {
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-            <button type="submit" className="btn btn-primary" style={{ width: 'auto' }} disabled={saving}>
+            <button type="submit" className="btn btn-primary" style={{ width: 'auto' }} disabled={saving || uploading}>
               {saving ? 'Saving...' : editingId ? 'Save Changes' : 'Create Character'}
             </button>
             <button type="button" className="btn btn-secondary" style={{ width: 'auto' }} onClick={closeForm} disabled={saving}>

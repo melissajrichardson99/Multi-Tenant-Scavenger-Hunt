@@ -63,7 +63,7 @@ export default function TriviaQuestion() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1rem' }}>
       <div className="card" style={{ textAlign: 'center' }}>
         <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: '600', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
-          🎓 FUN FACT
+          🎓 TRIVIA
         </div>
 
         <h2 style={{ marginBottom: '1.5rem' }}>{trivia.trivia_question}</h2>

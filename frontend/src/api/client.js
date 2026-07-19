@@ -26,10 +26,13 @@ function decodeTokenPayload(token) {
  */
 async function request(path, options = {}) {
   const url = `${API_BASE}${path}`;
-  
-  // Set JSON headers by default
+
+  // Set JSON headers by default, except for FormData bodies (e.g. file
+  // uploads) — the browser needs to set its own multipart boundary in
+  // Content-Type, so we must not override it.
+  const isFormData = options.body instanceof FormData;
   const headers = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...options.headers,
   };
 
@@ -148,6 +151,14 @@ export const apiClient = {
   deleteCharacter: (charId) => request(`/admin/characters?character_id=${charId}`, {
     method: 'DELETE'
   }),
+  uploadCharacterImage: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return request('/admin/characters/upload-image', {
+      method: 'POST',
+      body: formData,
+    });
+  },
 
   createRewardTier: (tierData) => request('/admin/reward-tiers', {
     method: 'POST',
