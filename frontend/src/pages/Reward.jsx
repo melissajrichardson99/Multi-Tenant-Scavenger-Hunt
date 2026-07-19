@@ -64,12 +64,31 @@ export default function Reward() {
     if (!cardCaptureRef.current || sharing) return;
     setSharing(true);
 
+    // Rounded corners look right on-screen, but some email clients/photo
+    // viewers render a transparent PNG's corners as an ugly blank patch
+    // instead of "no color". Square the corners off for the capture only,
+    // then restore them immediately after so the live card is unaffected.
+    const cardEl = cardCaptureRef.current;
+    const originalBorderRadius = cardEl.style.borderRadius;
+    cardEl.style.borderRadius = '0px';
+
+    // The card's rendered height/width can be fractional CSS pixels (e.g.
+    // 494.5px). html2canvas rounds that up when sizing its output canvas,
+    // leaving a stray transparent row/column along the bottom/right edge.
+    // Flooring to whole CSS pixels here keeps the captured canvas fully
+    // covered by rendered content.
+    const rect = cardEl.getBoundingClientRect();
+
     try {
-      const canvas = await html2canvas(cardCaptureRef.current, {
+      const canvas = await html2canvas(cardEl, {
         backgroundColor: null,
         scale: 2,
         useCORS: true,
+        width: Math.floor(rect.width),
+        height: Math.floor(rect.height),
       });
+
+      cardEl.style.borderRadius = originalBorderRadius;
 
       canvas.toBlob(async (blob) => {
         if (!blob) {
@@ -100,6 +119,7 @@ export default function Reward() {
         setSharing(false);
       }, 'image/png');
     } catch (err) {
+      cardEl.style.borderRadius = originalBorderRadius;
       setSharing(false);
       alert('Could not generate share image. Please try again.');
     }

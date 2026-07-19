@@ -13,7 +13,8 @@ from .routers import (
     sessions,
     scans,
     progress,
-    admin
+    admin,
+    proxy
 )
 
 # ── QR codes directory setup ──────────────────────────────────────────────────
@@ -64,3 +65,4 @@ app.include_router(sessions.router)
 app.include_router(scans.router)
 app.include_router(progress.router)
 app.include_router(admin.router)
+app.include_router(proxy.router)

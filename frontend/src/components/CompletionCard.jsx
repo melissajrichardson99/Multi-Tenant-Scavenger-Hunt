@@ -24,6 +24,17 @@ function isLightColor(hex) {
   return relativeLuminance(hexToRgb(hex)) > 0.5;
 }
 
+// Org logos are hosted on external domains (Cobb's/Screamfest's own sites)
+// that don't send permissive CORS headers, so html2canvas can't read the
+// pixel data when capturing this card — it renders fine live but exports as
+// a blank circle. Routing through our own backend sidesteps that entirely:
+// the proxy fetches the image server-side (no CORS involved) and serves it
+// back same-origin.
+function proxiedImageUrl(url) {
+  if (!url) return url;
+  return `/api/proxy-image?url=${encodeURIComponent(url)}`;
+}
+
 // percent > 0 lightens toward white, percent < 0 darkens toward black
 function shade(hex, percent) {
   const { r, g, b } = hexToRgb(hex);
@@ -110,7 +121,7 @@ const CompletionCard = forwardRef(function CompletionCard(
             style={{
               width: '76%',
               height: '76%',
-              backgroundImage: `url(${theme.logo_url})`,
+              backgroundImage: `url(${proxiedImageUrl(theme.logo_url)})`,
               backgroundSize: 'contain',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
