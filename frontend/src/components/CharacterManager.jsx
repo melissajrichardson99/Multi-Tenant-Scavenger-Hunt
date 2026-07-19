@@ -9,6 +9,13 @@ const EMPTY_FORM = {
   sort_order: 0,
   hint: '',
   area: '',
+  trivia_question: '',
+  trivia_option_a: '',
+  trivia_option_b: '',
+  trivia_option_c: '',
+  trivia_option_d: '',
+  trivia_correct_answer: '',
+  trivia_description: '',
 };
 
 export default function CharacterManager({ huntId }) {
@@ -62,6 +69,13 @@ export default function CharacterManager({ huntId }) {
       sort_order: character.sort_order ?? 0,
       hint: character.hint || '',
       area: character.area || '',
+      trivia_question: character.trivia_question || '',
+      trivia_option_a: character.trivia_option_a || '',
+      trivia_option_b: character.trivia_option_b || '',
+      trivia_option_c: character.trivia_option_c || '',
+      trivia_option_d: character.trivia_option_d || '',
+      trivia_correct_answer: character.trivia_correct_answer || '',
+      trivia_description: character.trivia_description || '',
     });
     setError('');
     setShowForm(true);
@@ -86,6 +100,13 @@ export default function CharacterManager({ huntId }) {
         sort_order: Number(formData.sort_order),
         hint: formData.hint,
         area: formData.area,
+        trivia_question: formData.trivia_question,
+        trivia_option_a: formData.trivia_option_a,
+        trivia_option_b: formData.trivia_option_b,
+        trivia_option_c: formData.trivia_option_c,
+        trivia_option_d: formData.trivia_option_d,
+        trivia_correct_answer: formData.trivia_correct_answer,
+        trivia_description: formData.trivia_description,
       };
 
       if (editingId) {
@@ -201,6 +222,79 @@ export default function CharacterManager({ huntId }) {
               placeholder="e.g. Animals, Games"
               value={formData.area}
               onChange={e => setFormData({ ...formData, area: e.target.value })}
+            />
+          </div>
+
+          <h4 style={{ marginTop: '1.5rem', marginBottom: '0.75rem' }}>Trivia Mini-Game (optional)</h4>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+            Leave the question blank to skip trivia entirely for this character — the "Fun Fact" button
+            only appears once a question is set.
+          </p>
+
+          <div className="form-group">
+            <label>Trivia Question</label>
+            <textarea
+              rows={2}
+              value={formData.trivia_question}
+              onChange={e => setFormData({ ...formData, trivia_question: e.target.value })}
+            />
+          </div>
+
+          <div className="grid grid-cols-2">
+            <div className="form-group">
+              <label>Option A</label>
+              <input
+                type="text"
+                value={formData.trivia_option_a}
+                onChange={e => setFormData({ ...formData, trivia_option_a: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label>Option B</label>
+              <input
+                type="text"
+                value={formData.trivia_option_b}
+                onChange={e => setFormData({ ...formData, trivia_option_b: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label>Option C</label>
+              <input
+                type="text"
+                value={formData.trivia_option_c}
+                onChange={e => setFormData({ ...formData, trivia_option_c: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label>Option D</label>
+              <input
+                type="text"
+                value={formData.trivia_option_d}
+                onChange={e => setFormData({ ...formData, trivia_option_d: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Correct Answer</label>
+            <select
+              value={formData.trivia_correct_answer}
+              onChange={e => setFormData({ ...formData, trivia_correct_answer: e.target.value })}
+            >
+              <option value="">— Select —</option>
+              <option value="a">Option A</option>
+              <option value="b">Option B</option>
+              <option value="c">Option C</option>
+              <option value="d">Option D</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label>Trivia Description (fact shown after answering, right or wrong)</label>
+            <textarea
+              rows={3}
+              value={formData.trivia_description}
+              onChange={e => setFormData({ ...formData, trivia_description: e.target.value })}
             />
           </div>
 

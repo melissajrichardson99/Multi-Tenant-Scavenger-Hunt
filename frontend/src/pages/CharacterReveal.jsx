@@ -158,7 +158,14 @@ export default function CharacterReveal() {
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {isRevisit ? (
+          {character.has_trivia ? (
+            <button
+              className="btn btn-primary"
+              onClick={() => navigate(`/trivia/${character.id}`, { state: { isHuntComplete, unlockedRewards } })}
+            >
+              🎓 Proceed to Trivia Question
+            </button>
+          ) : isRevisit ? (
             <button className="btn btn-primary" onClick={() => navigate('/progress')}>
               Back to Progress Gallery
             </button>
@@ -171,9 +178,6 @@ export default function CharacterReveal() {
               View My Progress Gallery
             </button>
           )}
-          <button className="btn btn-secondary" onClick={() => navigate('/scan')}>
-            Scan Another QR Code
-          </button>
         </div>
 
       </div>

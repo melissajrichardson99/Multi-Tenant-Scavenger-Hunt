@@ -69,6 +69,13 @@ class Character(Base):
     sort_order = Column(Integer, default=0, server_default="0")
     hint = Column(String, nullable=True)
     area = Column(String, nullable=True)
+    trivia_question = Column(String, nullable=True)
+    trivia_option_a = Column(String, nullable=True)
+    trivia_option_b = Column(String, nullable=True)
+    trivia_option_c = Column(String, nullable=True)
+    trivia_option_d = Column(String, nullable=True)
+    trivia_correct_answer = Column(String, nullable=True)
+    trivia_description = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), default=func.now(), server_default=func.now())
 
     # Relationships

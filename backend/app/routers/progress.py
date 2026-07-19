@@ -37,6 +37,7 @@ def get_progress(device_token: str, db: DBSession = Depends(get_db)):
             "sort_order": character.sort_order,
             "hint": None if character.id in found_character_ids else character.hint,
             "area": None if character.id in found_character_ids else character.area,
+            "has_trivia": bool(character.trivia_question) if character.id in found_character_ids else False,
         }
         for character in characters
     ]

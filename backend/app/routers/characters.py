@@ -53,6 +53,61 @@ def get_character_detail(character_id: str, device_token: str, db: DBSession = D
         "description": character.description,
         "image_url": character.image_url,
         "points": character.points,
+        "has_trivia": bool(character.trivia_question),
+    }
+
+
+@public_router.get("/{character_id}/trivia")
+def get_character_trivia(character_id: str, device_token: str, db: DBSession = Depends(get_db)):
+    """
+    Public trivia lookup for the "Fun Fact" mini-game. Same ownership-gated
+    pattern as the revisit endpoint above: requires a matching Scan row for
+    this device, and returns a generic 404 for any failure (unowned character,
+    nonexistent character, or a character with no trivia_question set) so a
+    guest can't probe for character IDs, other sessions' finds, or which
+    characters happen to have trivia configured.
+    """
+    try:
+        character_uuid = uuid.UUID(character_id)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=404, detail="Trivia not found")
+
+    session = (
+        db.query(PlayerSession)
+        .filter(PlayerSession.device_token == device_token)
+        .first()
+    )
+    if not session:
+        raise HTTPException(status_code=404, detail="Trivia not found")
+
+    character = (
+        db.query(Character)
+        .filter(Character.id == character_uuid, Character.hunt_id == session.hunt_id)
+        .first()
+    )
+    if not character:
+        raise HTTPException(status_code=404, detail="Trivia not found")
+
+    scan = (
+        db.query(Scan)
+        .filter(Scan.session_id == session.id, Scan.character_id == character.id)
+        .first()
+    )
+    if not scan:
+        raise HTTPException(status_code=404, detail="Trivia not found")
+
+    if not character.trivia_question:
+        raise HTTPException(status_code=404, detail="Trivia not found")
+
+    return {
+        "id": str(character.id),
+        "trivia_question": character.trivia_question,
+        "trivia_option_a": character.trivia_option_a,
+        "trivia_option_b": character.trivia_option_b,
+        "trivia_option_c": character.trivia_option_c,
+        "trivia_option_d": character.trivia_option_d,
+        "trivia_correct_answer": character.trivia_correct_answer,
+        "trivia_description": character.trivia_description,
     }
 
 
@@ -75,6 +130,13 @@ def get_admin_characters(hunt_id: str = None, db: DBSession = Depends(get_db), a
             "sort_order": c.sort_order,
             "hint": c.hint,
             "area": c.area,
+            "trivia_question": c.trivia_question,
+            "trivia_option_a": c.trivia_option_a,
+            "trivia_option_b": c.trivia_option_b,
+            "trivia_option_c": c.trivia_option_c,
+            "trivia_option_d": c.trivia_option_d,
+            "trivia_correct_answer": c.trivia_correct_answer,
+            "trivia_description": c.trivia_description,
             "qr_code_image_url": f"/qr_codes/{c.qr_code_value}.png",
         }
         for c in characters
@@ -115,6 +177,13 @@ def create_admin_character(payload: dict, db: DBSession = Depends(get_db), admin
         sort_order=payload.get("sort_order", 0),
         hint=payload.get("hint"),
         area=payload.get("area"),
+        trivia_question=payload.get("trivia_question"),
+        trivia_option_a=payload.get("trivia_option_a"),
+        trivia_option_b=payload.get("trivia_option_b"),
+        trivia_option_c=payload.get("trivia_option_c"),
+        trivia_option_d=payload.get("trivia_option_d"),
+        trivia_correct_answer=payload.get("trivia_correct_answer"),
+        trivia_description=payload.get("trivia_description"),
     )
     db.add(character)
     db.commit()
@@ -131,6 +200,13 @@ def create_admin_character(payload: dict, db: DBSession = Depends(get_db), admin
         "sort_order": character.sort_order,
         "hint": character.hint,
         "area": character.area,
+        "trivia_question": character.trivia_question,
+        "trivia_option_a": character.trivia_option_a,
+        "trivia_option_b": character.trivia_option_b,
+        "trivia_option_c": character.trivia_option_c,
+        "trivia_option_d": character.trivia_option_d,
+        "trivia_correct_answer": character.trivia_correct_answer,
+        "trivia_description": character.trivia_description,
         "qr_code_image_url": f"/qr_codes/{qr_filename}",
     }
 
@@ -146,7 +222,11 @@ def update_admin_character(payload: dict, db: DBSession = Depends(get_db), admin
     if not character:
         raise HTTPException(status_code=404, detail="Character not found")
 
-    updatable = ["name", "description", "image_url", "points", "sort_order", "hint", "area"]
+    updatable = [
+        "name", "description", "image_url", "points", "sort_order", "hint", "area",
+        "trivia_question", "trivia_option_a", "trivia_option_b", "trivia_option_c",
+        "trivia_option_d", "trivia_correct_answer", "trivia_description",
+    ]
     for field in updatable:
         if field in payload:
             setattr(character, field, payload[field])
@@ -165,6 +245,13 @@ def update_admin_character(payload: dict, db: DBSession = Depends(get_db), admin
         "sort_order": character.sort_order,
         "hint": character.hint,
         "area": character.area,
+        "trivia_question": character.trivia_question,
+        "trivia_option_a": character.trivia_option_a,
+        "trivia_option_b": character.trivia_option_b,
+        "trivia_option_c": character.trivia_option_c,
+        "trivia_option_d": character.trivia_option_d,
+        "trivia_correct_answer": character.trivia_correct_answer,
+        "trivia_description": character.trivia_description,
         "qr_code_image_url": f"/qr_codes/{character.qr_code_value}.png",
     }
 

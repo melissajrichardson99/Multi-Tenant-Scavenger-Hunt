@@ -89,6 +89,9 @@ export const apiClient = {
   getCharacter: (characterId, deviceToken) =>
     request(`/characters/${characterId}?device_token=${encodeURIComponent(deviceToken)}`),
 
+  getTrivia: (characterId, deviceToken) =>
+    request(`/characters/${characterId}/trivia?device_token=${encodeURIComponent(deviceToken)}`),
+
   // Admin Endpoints
   adminLogin: async (email, password) => {
     const data = await request('/admin/login', {

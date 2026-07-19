@@ -5,6 +5,7 @@ import Start from './pages/Start';
 import Scan from './pages/Scan';
 import Progress from './pages/Progress';
 import CharacterReveal from './pages/CharacterReveal';
+import TriviaQuestion from './pages/TriviaQuestion';
 import Reward from './pages/Reward';
 import Admin from './pages/Admin';
 import Header from './components/Header';
@@ -46,6 +47,7 @@ export default function App() {
                   <Route path="/scan" element={<Scan />} />
                   <Route path="/progress" element={<Progress />} />
                   <Route path="/reveal/:characterId" element={<CharacterReveal />} />
+                  <Route path="/trivia/:characterId" element={<TriviaQuestion />} />
                   <Route path="/reward" element={<Reward />} />
                   {/* Fallback to the hunt selector */}
                   <Route path="*" element={<HuntSelector />} />

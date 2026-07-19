@@ -93,6 +93,7 @@ def record_scan(payload: dict, db: DBSession = Depends(get_db)):
             "description": character.description,
             "image_url": character.image_url,
             "points": character.points,
+            "has_trivia": bool(character.trivia_question),
         },
         "total_found": total_found,
         "total_characters": total_characters,
