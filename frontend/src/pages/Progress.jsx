@@ -10,13 +10,13 @@ function SortBadge({ sortOrder }) {
       position: 'absolute',
       top: '8px',
       left: '8px',
-      background: 'rgba(0,0,0,0.7)',
-      color: '#fff',
+      background: 'none',
+      color: 'var(--text-primary)',
       fontSize: '0.7rem',
       fontWeight: '700',
       width: '20px',
       height: '20px',
-      borderRadius: '50%',
+      borderRadius: '10px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -27,6 +27,11 @@ function SortBadge({ sortOrder }) {
   );
 }
 
+// Toggle for the circular "plate" backdrop behind character images (see the
+// matching `.character-plate` block in index.css). Flip to false to remove
+// the plate entirely without touching the name/layout fix above it.
+const SHOW_CHARACTER_PLATE = true;
+
 function CharacterCard({ char, onClick }) {
   return (
     <div
@@ -34,24 +39,27 @@ function CharacterCard({ char, onClick }) {
       onClick={onClick}
       style={{ cursor: 'pointer' }}
     >
-      <SortBadge sortOrder={char.sort_order} />
-      {char.found ? (
-        <>
-          <div className="badge">FOUND</div>
-          {char.image_url ? (
-            <img src={char.image_url} alt={char.name} />
-          ) : (
-            <div style={{ fontSize: '2rem' }}>🦘</div>
-          )}
-          <div className="name">{char.name}</div>
-        </>
-      ) : (
-        <>
-          <div className="badge locked">LOCKED</div>
-          <div style={{ fontSize: '2rem', opacity: 0.3 }}>❓</div>
-          <div className="name">???</div>
-        </>
-      )}
+      <div className="character-card-image">
+        <SortBadge sortOrder={char.sort_order} />
+        {char.found ? (
+          <>
+            <div className="badge">FOUND</div>
+            {SHOW_CHARACTER_PLATE && <div className="character-plate" />}
+            {char.image_url ? (
+              <img src={char.image_url} alt={char.name} />
+            ) : (
+              <div style={{ fontSize: '2rem', position: 'relative', zIndex: 1 }}>🦘</div>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="badge locked">LOCKED</div>
+            {SHOW_CHARACTER_PLATE && <div className="character-plate" />}
+            <div style={{ fontSize: '2rem', opacity: 0.3, position: 'relative', zIndex: 1 }}>❓</div>
+          </>
+        )}
+      </div>
+      <div className="character-card-name">{char.found ? char.name : '???'}</div>
     </div>
   );
 }

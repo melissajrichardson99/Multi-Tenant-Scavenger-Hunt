@@ -98,6 +98,8 @@ export default function Admin() {
     setHunts([]);
     setOrganizations([]);
     setStats(null);
+    setEmail('');
+    setPassword('');
   };
 
   if (!token) {
@@ -115,7 +117,7 @@ export default function Admin() {
             </div>
           )}
 
-          <form onSubmit={handleLogin}>
+          <form onSubmit={handleLogin} noValidate>
             <div className="form-group">
               <label>Email Address</label>
               <input 

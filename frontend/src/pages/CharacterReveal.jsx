@@ -84,17 +84,22 @@ export default function CharacterReveal() {
           border: '4px solid var(--secondary-color)',
           margin: '0 auto 1.5rem auto',
           overflow: 'hidden',
-          background: 'rgba(255,255,255,0.05)',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          padding: '20px'
         }}>
           {character.image_url ? (
-            <img src={character.image_url} alt={character.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src={character.image_url} alt={character.name} style={{ 
+              width: '100%', 
+              height: '100%', 
+              objectFit: 'contain',
+              filter: 'drop-shadow(0 8px 12px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 16px rgba(255, 255, 255, 0.2))'
+            }} />
           ) : (
             <span style={{ fontSize: '5rem' }}>🦘</span>
           )}
-        </div>
+      </div>
 
         {/* Points Badge */}
         {!isRevisit && (

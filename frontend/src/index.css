@@ -200,7 +200,7 @@ footer {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--secondary-color) 0%, color-mix(in srgb, var(--secondary-color) 100%, black 25%) 100%);
+  background: var(--secondary-color);
   color: #ffffff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
@@ -311,15 +311,13 @@ input:focus, select:focus, textarea:focus {
 }
 
 .character-card {
-  aspect-ratio: 1;
   position: relative;
   border-radius: var(--radius-md);
   border: 1px solid var(--card-border);
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--card-bg);
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
   transition: var(--transition-smooth);
 }
 
@@ -327,11 +325,26 @@ input:focus, select:focus, textarea:focus {
   border-color: var(--success-color);
 }
 
+/* Image area: its own section of the card, sized independently of the name
+   label below it so the label never has to overlay the artwork. */
+.character-card-image {
+  position: relative;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 14px;
+}
+
 .character-card img {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   transition: var(--transition-smooth);
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.4)) drop-shadow(0 0 16px rgba(255, 255, 255, 0.2));
 }
 
 .character-card:hover img {
@@ -346,6 +359,7 @@ input:focus, select:focus, textarea:focus {
   position: absolute;
   top: 8px;
   right: 8px;
+  z-index: 1;
   background: var(--success-color);
   color: #000;
   font-size: 0.7rem;
@@ -359,17 +373,33 @@ input:focus, select:focus, textarea:focus {
   color: var(--text-primary);
 }
 
-.character-card .name {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0));
-  color: #ffffff;
+/* Name label: normal document flow below the image, not stacked on top of it. */
+.character-card-name {
   padding: 8px;
   font-size: 0.8rem;
   font-weight: 600;
   text-align: center;
+  color: var(--text-primary);
+  border-top: 1px solid var(--card-border);
+}
+
+/* --- Optional circular "plate" behind the character image ---------------
+   Purely decorative backdrop for transparent character PNGs, matching the
+   badge-plate treatment on the shareable completion card. Self-contained:
+   delete this block and the `.character-plate` div in Progress.jsx's
+   CharacterCard to remove the effect without touching anything else. */
+.character-plate {
+  position: absolute;
+  width: 76%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  z-index: 0;
+  opacity: 0.5;
+}
+
+.character-card.locked .character-plate {
+  background: var(--text-muted);
+  opacity: 0.35;
 }
 
 /* Micro-animations */
