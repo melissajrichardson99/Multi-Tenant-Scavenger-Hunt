@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import { apiClient } from '../api/client';
 import { useOrgTheme } from '../theme';
@@ -27,6 +27,8 @@ const REASON_MESSAGES = {
 export default function Scan() {
   const navigate = useNavigate();
   const { activeOrg } = useOrgTheme();
+  const [searchParams] = useSearchParams();
+  const codeParam = searchParams.get('code');
   const [deviceToken, setDeviceToken] = useState('');
   const [manualCode, setManualCode] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
@@ -39,14 +41,33 @@ export default function Scan() {
 
   useEffect(() => {
     const token = localStorage.getItem('device_token');
-    if (!token) {
-      setStatusMsg('No session found. Redirecting to home...');
-      setStatusType('error');
-      setTimeout(() => navigate(activeOrg?.slug ? `/start/${activeOrg.slug}` : '/'), 2000);
-    } else {
+    if (token) {
       setDeviceToken(token);
+      return;
     }
-  }, [navigate, activeOrg]);
+
+    // No session yet. If a code arrived via the URL (e.g. a physical sign
+    // scanned with the phone's regular camera app, before ever visiting an
+    // entrance screen), we don't yet know which org/hunt it belongs to —
+    // look it up so we can route to the right entrance screen instead of
+    // silently discarding the code at the generic hunt selector.
+    if (codeParam) {
+      apiClient.lookupHuntByCode(codeParam)
+        .then((data) => {
+          navigate(`/start/${data.organization_slug}?pendingCode=${encodeURIComponent(codeParam)}`);
+        })
+        .catch(() => {
+          setStatusMsg("That code doesn't match any character. Double-check the sign and try again.");
+          setStatusType('error');
+          setTimeout(() => navigate('/'), 2500);
+        });
+      return;
+    }
+
+    setStatusMsg('No session found. Redirecting to home...');
+    setStatusType('error');
+    setTimeout(() => navigate(activeOrg?.slug ? `/start/${activeOrg.slug}` : '/'), 2000);
+  }, [navigate, activeOrg, codeParam]);
 
   const resumeCamera = () => {
     const scanner = html5QrcodeRef.current;
@@ -85,6 +106,17 @@ export default function Scan() {
       resumeCamera();
     }
   }, [deviceToken, navigate]);
+
+  // If a code arrived via the URL and we already have a session (e.g.
+  // re-opening the QR's own URL, or arriving here after Start.jsx resumed
+  // a session for a pending code), auto-submit it exactly like manual
+  // entry — the guest shouldn't need to re-scan or retype anything.
+  useEffect(() => {
+    if (deviceToken && codeParam) {
+      handleScanSubmit(codeParam);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deviceToken, codeParam]);
 
   // Start the camera-based scanner once we have a session to scan into.
   useEffect(() => {

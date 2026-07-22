@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { useOrgTheme } from '../theme';
 
@@ -7,6 +7,8 @@ export default function Start() {
   const { orgSlug } = useParams();
   const navigate = useNavigate();
   const { setActiveOrg } = useOrgTheme();
+  const [searchParams] = useSearchParams();
+  const pendingCode = searchParams.get('pendingCode');
 
   const [hunt, setHunt] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -67,7 +69,10 @@ export default function Start() {
       const session = await apiClient.createSession(hunt.hunt_id);
       // Store device_token in localStorage; all subsequent calls read it from here
       localStorage.setItem('device_token', session.device_token);
-      navigate('/progress');
+      // If the guest arrived here via a scanned code we couldn't route until
+      // a session existed, flow straight into scanning it now instead of
+      // making them find and re-scan the same sign again.
+      navigate(pendingCode ? `/scan?code=${encodeURIComponent(pendingCode)}` : '/progress');
     } catch (err) {
       setError(err.message || 'Failed to start session');
       setLoading(false);
@@ -75,7 +80,7 @@ export default function Start() {
   };
 
   const handleResumeHunt = () => {
-    navigate('/progress');
+    navigate(pendingCode ? `/scan?code=${encodeURIComponent(pendingCode)}` : '/progress');
   };
 
   if (loading) {

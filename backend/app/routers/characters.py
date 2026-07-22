@@ -1,14 +1,39 @@
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from sqlalchemy import func
 from sqlalchemy.orm import Session as DBSession
 from ..database import get_db
 from ..models import Character, PlayerSession, Scan, AdminUser
 from ..auth import get_current_admin
-from ..qr_codes import QR_CODES_DIR, generate_unique_qr_code, generate_and_upload_qr_image
+from ..qr_codes import QR_CODES_DIR, generate_unique_qr_code, generate_and_upload_qr_image, normalize_code
 from ..storage import ALLOWED_IMAGE_CONTENT_TYPES, MAX_UPLOAD_BYTES, QR_CODES_BUCKET, upload_character_image, public_url
 
 router = APIRouter(prefix="/api/admin/characters", tags=["Admin Characters"])
 public_router = APIRouter(prefix="/api/characters", tags=["Characters"])
+
+
+@public_router.get("/lookup-hunt")
+def lookup_hunt_by_code(code: str, db: DBSession = Depends(get_db)):
+    """
+    Public, unauthenticated lookup for routing a guest who scanned a physical
+    sign with no active session yet (e.g. via their phone's regular camera
+    app, before ever visiting an entrance screen). Returns only the routing
+    info needed to send them to the right org's entrance screen — never
+    name, description, image, or anything else spoiler-revealing.
+    """
+    normalized_code = normalize_code(code)
+    character = (
+        db.query(Character)
+        .filter(func.upper(func.replace(Character.qr_code_value, "-", "")) == normalized_code)
+        .first()
+    )
+    if not character:
+        raise HTTPException(status_code=404, detail="Code not found")
+
+    return {
+        "organization_slug": character.hunt.organization.slug,
+        "hunt_id": str(character.hunt_id),
+    }
 
 
 @public_router.get("/{character_id}")

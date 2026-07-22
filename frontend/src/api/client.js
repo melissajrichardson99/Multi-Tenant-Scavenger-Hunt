@@ -89,6 +89,8 @@ export const apiClient = {
 
   getProgress: (deviceToken) => request(`/progress/${deviceToken}`),
 
+  lookupHuntByCode: (code) => request(`/characters/lookup-hunt?code=${encodeURIComponent(code)}`),
+
   getCharacter: (characterId, deviceToken) =>
     request(`/characters/${characterId}?device_token=${encodeURIComponent(deviceToken)}`),
 
