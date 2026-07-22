@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session as DBSession
 from ..database import get_db
 from ..models import Character, PlayerSession, Scan, AdminUser
 from ..auth import get_current_admin
-from ..qr_codes import QR_CODES_DIR, generate_unique_qr_code, generate_qr_image
-from ..storage import ALLOWED_IMAGE_CONTENT_TYPES, MAX_UPLOAD_BYTES, upload_character_image
+from ..qr_codes import QR_CODES_DIR, generate_unique_qr_code, generate_and_upload_qr_image
+from ..storage import ALLOWED_IMAGE_CONTENT_TYPES, MAX_UPLOAD_BYTES, QR_CODES_BUCKET, upload_character_image, public_url
 
 router = APIRouter(prefix="/api/admin/characters", tags=["Admin Characters"])
 public_router = APIRouter(prefix="/api/characters", tags=["Characters"])
@@ -171,7 +171,7 @@ def get_admin_characters(hunt_id: str = None, db: DBSession = Depends(get_db), a
             "trivia_option_d": c.trivia_option_d,
             "trivia_correct_answer": c.trivia_correct_answer,
             "trivia_description": c.trivia_description,
-            "qr_code_image_url": f"/qr_codes/{c.qr_code_value}.png",
+            "qr_code_image_url": public_url(QR_CODES_BUCKET, f"{c.qr_code_value}.png"),
         }
         for c in characters
     ]
@@ -181,8 +181,9 @@ def get_admin_characters(hunt_id: str = None, db: DBSession = Depends(get_db), a
 def create_admin_character(payload: dict, db: DBSession = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
     """
     Create a new character.  Automatically generates a unique, human-friendly
-    qr_code_value (e.g. K7XQ-2M9P-T4RN) and saves a QR code PNG to disk.
-    Returns the created character including qr_code_image_url.
+    qr_code_value (e.g. K7XQ-2M9P-T4RN) and uploads a QR code PNG to the
+    "qr-codes" Supabase Storage bucket.  Returns the created character
+    including qr_code_image_url.
     """
     hunt_id = payload.get("hunt_id")
     name = payload.get("name")
@@ -195,9 +196,9 @@ def create_admin_character(payload: dict, db: DBSession = Depends(get_db), admin
     # Generate a unique QR code value
     qr_code_value = generate_unique_qr_code(db)
 
-    # Generate and persist the QR image
+    # Generate the QR image and upload it to Supabase Storage
     try:
-        qr_filename = generate_qr_image(qr_code_value)
+        qr_code_image_url = generate_and_upload_qr_image(qr_code_value)
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -241,7 +242,7 @@ def create_admin_character(payload: dict, db: DBSession = Depends(get_db), admin
         "trivia_option_d": character.trivia_option_d,
         "trivia_correct_answer": character.trivia_correct_answer,
         "trivia_description": character.trivia_description,
-        "qr_code_image_url": f"/qr_codes/{qr_filename}",
+        "qr_code_image_url": qr_code_image_url,
     }
 
 
@@ -286,7 +287,7 @@ def update_admin_character(payload: dict, db: DBSession = Depends(get_db), admin
         "trivia_option_d": character.trivia_option_d,
         "trivia_correct_answer": character.trivia_correct_answer,
         "trivia_description": character.trivia_description,
-        "qr_code_image_url": f"/qr_codes/{character.qr_code_value}.png",
+        "qr_code_image_url": public_url(QR_CODES_BUCKET, f"{character.qr_code_value}.png"),
     }
 
 

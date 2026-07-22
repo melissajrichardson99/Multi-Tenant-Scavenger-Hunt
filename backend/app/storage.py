@@ -1,7 +1,7 @@
 """
-Uploads character images to Supabase Storage via its REST API directly
-(no supabase-py dependency needed for this one call). Used by the admin
-character image-upload endpoint (routers/characters.py).
+Uploads files to Supabase Storage via its REST API directly (no supabase-py
+dependency needed for this). Used by the admin character image-upload
+endpoint and QR code generation (routers/characters.py, qr_codes.py).
 """
 
 import os
@@ -11,6 +11,7 @@ SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
 CHARACTER_IMAGES_BUCKET = "character-images"
+QR_CODES_BUCKET = "qr-codes"
 
 # Content-types accepted for character image uploads, mapped to the file
 # extension used when generating the storage object's unique filename.
@@ -24,26 +25,32 @@ ALLOWED_IMAGE_CONTENT_TYPES = {
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5MB
 
 
-def upload_character_image(object_name: str, content_type: str, file_bytes: bytes) -> str:
+def public_url(bucket_name: str, object_name: str) -> str:
+    """Builds the public URL for an object in a public-read Supabase Storage bucket."""
+    return f"{SUPABASE_URL}/storage/v1/object/public/{bucket_name}/{object_name}"
+
+
+def upload_to_bucket(bucket_name: str, object_name: str, content_type: str, file_bytes: bytes) -> str:
     """
-    Uploads file_bytes to the "character-images" Supabase Storage bucket
-    under object_name, using the service role key for write access (the
-    bucket itself is public for reads). Returns the public URL.
-    Raises RuntimeError if config is missing or the upload fails.
+    Uploads file_bytes to the given Supabase Storage bucket under object_name,
+    using the service role key for write access (the bucket itself must be
+    public for reads). Returns the public URL. Uses upsert so re-uploading
+    under the same object_name (e.g. re-rendering a QR code) overwrites
+    cleanly instead of erroring. Raises RuntimeError if config is missing or
+    the upload fails.
     """
     if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
         raise RuntimeError(
-            "Image upload is not configured: SUPABASE_URL and "
+            "Upload is not configured: SUPABASE_URL and "
             "SUPABASE_SERVICE_ROLE_KEY must be set in the environment."
         )
 
-    upload_url = (
-        f"{SUPABASE_URL}/storage/v1/object/{CHARACTER_IMAGES_BUCKET}/{object_name}"
-    )
+    upload_url = f"{SUPABASE_URL}/storage/v1/object/{bucket_name}/{object_name}"
     headers = {
         "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
         "apikey": SUPABASE_SERVICE_ROLE_KEY,
         "Content-Type": content_type,
+        "x-upsert": "true",
     }
 
     try:
@@ -56,4 +63,9 @@ def upload_character_image(object_name: str, content_type: str, file_bytes: byte
             f"Supabase Storage upload failed ({response.status_code}): {response.text}"
         )
 
-    return f"{SUPABASE_URL}/storage/v1/object/public/{CHARACTER_IMAGES_BUCKET}/{object_name}"
+    return public_url(bucket_name, object_name)
+
+
+def upload_character_image(object_name: str, content_type: str, file_bytes: bytes) -> str:
+    """Uploads file_bytes to the "character-images" bucket. Returns the public URL."""
+    return upload_to_bucket(CHARACTER_IMAGES_BUCKET, object_name, content_type, file_bytes)
