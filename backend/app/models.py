@@ -143,6 +143,7 @@ class AdminUser(Base):
     organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=True)  # Null = super admin
     email = Column(String, unique=True, nullable=False)
     password_hash = Column(String, nullable=False)
+    is_active = Column(Boolean, default=True, server_default="true")
     created_at = Column(DateTime(timezone=True), default=func.now(), server_default=func.now())
 
     # Relationships

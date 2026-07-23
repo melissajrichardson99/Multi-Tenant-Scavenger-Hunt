@@ -63,7 +63,7 @@ def get_current_admin(
         raise unauthorized
 
     admin_user = db.query(AdminUser).filter(AdminUser.id == admin_id).first()
-    if not admin_user:
+    if not admin_user or not admin_user.is_active:
         raise unauthorized
 
     return admin_user

@@ -4,6 +4,7 @@ import CharacterManager from '../components/CharacterManager';
 import HuntManager from '../components/HuntManager';
 import OrganizationManager from '../components/OrganizationManager';
 import AdminManager from '../components/AdminManager';
+import ChangePassword from '../components/ChangePassword';
 
 export default function Admin() {
   const [token, setToken] = useState(localStorage.getItem('admin_token'));
@@ -186,9 +187,12 @@ export default function Admin() {
           <span style={{ fontSize: '0.8rem', color: 'var(--primary-color)', fontWeight: 'bold' }}>ADMIN PORTAL</span>
           <h2>Scavenger Hunt Dashboard</h2>
         </div>
-        <button className="btn btn-secondary" style={{ width: 'auto' }} onClick={handleLogout}>
-          Sign Out
-        </button>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+          <ChangePassword />
+          <button className="btn btn-secondary" style={{ width: 'auto' }} onClick={handleLogout}>
+            Sign Out
+          </button>
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>

@@ -4,6 +4,7 @@ import { apiClient } from '../api/client';
 const EMPTY_FORM = {
   email: '',
   password: '',
+  confirmPassword: '',
   organization_id: '',
 };
 
@@ -13,6 +14,7 @@ export default function AdminManager({ adminUsers, loadingAdminUsers, onAdminUse
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [togglingId, setTogglingId] = useState(null);
 
   const isSuperAdmin = !(apiClient.getCurrentAdminClaims()?.organization_id);
 
@@ -34,6 +36,12 @@ export default function AdminManager({ adminUsers, loadingAdminUsers, onAdminUse
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords don't match.");
+      return;
+    }
+
     setSaving(true);
     try {
       await apiClient.createAdminUser({
@@ -48,6 +56,23 @@ export default function AdminManager({ adminUsers, loadingAdminUsers, onAdminUse
     } catch (err) {
       setSaving(false);
       setError(err.message || 'Failed to create admin account.');
+    }
+  };
+
+  const handleToggleActive = async (adminUser) => {
+    setError('');
+    setTogglingId(adminUser.id);
+    try {
+      if (adminUser.is_active) {
+        await apiClient.deactivateAdminUser(adminUser.id);
+      } else {
+        await apiClient.reactivateAdminUser(adminUser.id);
+      }
+      setTogglingId(null);
+      onAdminUsersChanged();
+    } catch (err) {
+      setTogglingId(null);
+      setError(err.message || 'Failed to update admin account status.');
     }
   };
 
@@ -93,6 +118,17 @@ export default function AdminManager({ adminUsers, loadingAdminUsers, onAdminUse
           </div>
 
           <div className="form-group">
+            <label>Confirm Password</label>
+            <input
+              type="password"
+              required
+              placeholder="••••••••"
+              value={formData.confirmPassword}
+              onChange={e => setFormData({ ...formData, confirmPassword: e.target.value })}
+            />
+          </div>
+
+          <div className="form-group">
             <label>Organization Scope</label>
             <select
               value={formData.organization_id}
@@ -127,6 +163,8 @@ export default function AdminManager({ adminUsers, loadingAdminUsers, onAdminUse
               <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--card-border)' }}>
                 <th style={{ padding: '0.5rem' }}>Email</th>
                 <th style={{ padding: '0.5rem' }}>Scope</th>
+                <th style={{ padding: '0.5rem' }}>Status</th>
+                <th style={{ padding: '0.5rem' }}></th>
               </tr>
             </thead>
             <tbody>
@@ -134,6 +172,21 @@ export default function AdminManager({ adminUsers, loadingAdminUsers, onAdminUse
                 <tr key={a.id} style={{ borderBottom: '1px dashed rgba(255,255,255,0.05)' }}>
                   <td style={{ padding: '0.5rem' }}>{a.email}</td>
                   <td style={{ padding: '0.5rem' }}>{a.organization_name}</td>
+                  <td style={{ padding: '0.5rem' }}>
+                    <span style={{ color: a.is_active ? 'var(--success-color)' : 'var(--text-muted)', fontWeight: 'bold' }}>
+                      {a.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '0.5rem' }}>
+                    <button
+                      className="btn btn-secondary"
+                      style={{ width: 'auto', padding: '0.3rem 0.8rem', fontSize: '0.85rem' }}
+                      onClick={() => handleToggleActive(a)}
+                      disabled={togglingId === a.id}
+                    >
+                      {togglingId === a.id ? 'Working...' : (a.is_active ? 'Deactivate' : 'Reactivate')}
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

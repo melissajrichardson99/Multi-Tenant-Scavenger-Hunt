@@ -135,6 +135,17 @@ export const apiClient = {
     method: 'POST',
     body: JSON.stringify(adminData)
   }),
+  deactivateAdminUser: (adminUserId) => request(`/admin/admin-users/${adminUserId}/deactivate`, {
+    method: 'PATCH'
+  }),
+  reactivateAdminUser: (adminUserId) => request(`/admin/admin-users/${adminUserId}/reactivate`, {
+    method: 'PATCH'
+  }),
+
+  changePassword: (currentPassword, newPassword) => request('/admin/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+  }),
 
   getAdminHunts: () => request('/admin/hunts'),
   createHunt: (huntData) => request('/admin/hunts', {
