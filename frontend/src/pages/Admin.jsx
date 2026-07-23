@@ -3,6 +3,7 @@ import { apiClient } from '../api/client';
 import CharacterManager from '../components/CharacterManager';
 import HuntManager from '../components/HuntManager';
 import OrganizationManager from '../components/OrganizationManager';
+import AdminManager from '../components/AdminManager';
 
 export default function Admin() {
   const [token, setToken] = useState(localStorage.getItem('admin_token'));
@@ -13,9 +14,33 @@ export default function Admin() {
   const [loadingHunts, setLoadingHunts] = useState(false);
   const [organizations, setOrganizations] = useState([]);
   const [loadingOrganizations, setLoadingOrganizations] = useState(false);
+  const [adminUsers, setAdminUsers] = useState([]);
+  const [loadingAdminUsers, setLoadingAdminUsers] = useState(false);
   const [selectedHuntId, setSelectedHuntId] = useState('');
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // Only super-admins (organization_id is null on their JWT claims) can see
+  // the admin roster — matches the backend restriction on GET /admin-users.
+  const isSuperAdmin = !(apiClient.getCurrentAdminClaims()?.organization_id);
+
+  const refreshAdminUsers = () => {
+    if (!isSuperAdmin) return;
+    setLoadingAdminUsers(true);
+    apiClient.getAdminUsers()
+      .then(data => {
+        setAdminUsers(data);
+        setLoadingAdminUsers(false);
+      })
+      .catch(err => {
+        setLoadingAdminUsers(false);
+        if (err.status === 401 || err.status === 403) {
+          handleLogout();
+        } else {
+          setError('Failed to fetch admin accounts list.');
+        }
+      });
+  };
 
   const refreshOrganizations = () => {
     setLoadingOrganizations(true);
@@ -61,6 +86,7 @@ export default function Admin() {
     if (token) {
       refreshHunts();
       refreshOrganizations();
+      refreshAdminUsers();
     }
   }, [token]);
 
@@ -97,6 +123,7 @@ export default function Admin() {
     setToken(null);
     setHunts([]);
     setOrganizations([]);
+    setAdminUsers([]);
     setStats(null);
     setEmail('');
     setPassword('');
@@ -236,6 +263,13 @@ export default function Admin() {
         />
 
         <CharacterManager huntId={selectedHuntId} />
+
+        <AdminManager
+          adminUsers={adminUsers}
+          loadingAdminUsers={loadingAdminUsers}
+          onAdminUsersChanged={refreshAdminUsers}
+          organizations={organizations}
+        />
 
       </div>
     </div>

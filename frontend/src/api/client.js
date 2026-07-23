@@ -130,6 +130,12 @@ export const apiClient = {
     body: JSON.stringify(orgData)
   }),
 
+  getAdminUsers: () => request('/admin/admin-users'),
+  createAdminUser: (adminData) => request('/admin/admin-users', {
+    method: 'POST',
+    body: JSON.stringify(adminData)
+  }),
+
   getAdminHunts: () => request('/admin/hunts'),
   createHunt: (huntData) => request('/admin/hunts', {
     method: 'POST',
