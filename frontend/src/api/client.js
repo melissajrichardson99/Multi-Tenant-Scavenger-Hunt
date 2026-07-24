@@ -158,6 +158,28 @@ export const apiClient = {
   }),
   getHuntStats: (huntId) => request(`/admin/hunts/${huntId}/stats`),
 
+  // Returns a PDF Blob (not JSON), so this bypasses the request() helper.
+  printQrCodes: async (huntId) => {
+    const token = localStorage.getItem('admin_token');
+    const response = await fetch(`${API_BASE}/admin/hunts/${huntId}/print-qr-codes`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+
+    if (!response.ok) {
+      let errorData = {};
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        errorData = { detail: response.statusText };
+      }
+      const error = new Error(errorData.detail || 'Failed to generate QR code PDF');
+      error.status = response.status;
+      throw error;
+    }
+
+    return response.blob();
+  },
+
   getAdminCharacters: (huntId) => request(`/admin/characters?hunt_id=${huntId}`),
   createCharacter: (charData) => request('/admin/characters', {
     method: 'POST',

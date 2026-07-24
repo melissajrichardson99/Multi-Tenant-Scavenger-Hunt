@@ -29,6 +29,7 @@ export default function HuntManager({ hunts, loadingHunts, onHuntsChanged, organ
   const [expandedHuntId, setExpandedHuntId] = useState(null);
   const [statsByHuntId, setStatsByHuntId] = useState({});
   const [statsLoadingId, setStatsLoadingId] = useState(null);
+  const [printingId, setPrintingId] = useState(null);
 
   const isSuperAdmin = !(apiClient.getCurrentAdminClaims()?.organization_id);
 
@@ -119,6 +120,26 @@ export default function HuntManager({ hunts, loadingHunts, onHuntsChanged, organ
           setStatsLoadingId(null);
           setError(err.message || 'Failed to fetch hunt stats.');
         });
+    }
+  };
+
+  const handlePrintQrCodes = async (hunt) => {
+    setPrintingId(hunt.id);
+    setError('');
+    try {
+      const blob = await apiClient.printQrCodes(hunt.id);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${hunt.name.replace(/\s+/g, '_')}_qr_codes.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err.message || 'Failed to generate QR code PDF.');
+    } finally {
+      setPrintingId(null);
     }
   };
 
@@ -278,6 +299,14 @@ export default function HuntManager({ hunts, loadingHunts, onHuntsChanged, organ
                           onClick={() => toggleStats(hunt.id)}
                         >
                           {expandedHuntId === hunt.id ? 'Hide Stats' : 'View Stats'}
+                        </button>
+                        <button
+                          className="btn btn-secondary"
+                          style={{ width: 'auto', padding: '0.4rem 0.9rem', fontSize: '0.85rem' }}
+                          onClick={() => handlePrintQrCodes(hunt)}
+                          disabled={printingId === hunt.id}
+                        >
+                          {printingId === hunt.id ? 'Generating...' : 'Print QR Codes'}
                         </button>
                       </div>
                     </td>

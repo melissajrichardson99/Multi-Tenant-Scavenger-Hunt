@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from ..database import get_db
 from ..models import Organization, Hunt, Character, PlayerSession, Scan, AdminUser
 from ..auth import get_current_admin
+from ..storage import QR_CODES_BUCKET, public_url
+from ..pdf_generation import build_qr_code_pdf, safe_filename_stem
 
 router = APIRouter(tags=["Hunts"])
 
@@ -200,3 +203,45 @@ def get_hunt_stats(hunt_id: str, db: Session = Depends(get_db), admin: AdminUser
             for name, scan_count in character_stats
         ],
     }
+
+
+@router.get("/api/admin/hunts/{hunt_id}/print-qr-codes")
+def print_hunt_qr_codes(hunt_id: str, db: Session = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
+    """
+    Generates a downloadable PDF with two sections: guest-facing signs
+    (QR code + plain numeric index only, no spoiler content) meant to be
+    printed/cut/posted in the park, and a staff-only reference sheet
+    mapping each index to the character's name/hint/area.
+    """
+    query = db.query(Hunt).filter(Hunt.id == hunt_id)
+    if admin.organization_id:
+        query = query.filter(Hunt.organization_id == admin.organization_id)
+    hunt = query.first()
+    if not hunt:
+        raise HTTPException(status_code=404, detail="Hunt not found")
+
+    characters = (
+        db.query(Character)
+        .filter(Character.hunt_id == hunt_id)
+        .order_by(Character.sort_order)
+        .all()
+    )
+
+    character_data = [
+        {
+            "name": character.name,
+            "hint": character.hint,
+            "area": character.area,
+            "qr_code_image_url": public_url(QR_CODES_BUCKET, f"{character.qr_code_value}.png"),
+        }
+        for character in characters
+    ]
+
+    pdf_bytes = build_qr_code_pdf(hunt.name, character_data)
+    filename = f"{safe_filename_stem(hunt.name)}_qr_codes.pdf"
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
