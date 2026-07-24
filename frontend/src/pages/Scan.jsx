@@ -122,8 +122,53 @@ export default function Scan() {
   useEffect(() => {
     if (!deviceToken) return;
 
+    let unmounted = false;
+    // Captured directly (not via a React ref prop) so it stays reachable
+    // from the cleanup below even after React has detached the DOM subtree
+    // and nulled out any ref props for the unmount.
+    const containerEl = document.getElementById(QR_REGION_ID);
+
     const scanner = new Html5Qrcode(QR_REGION_ID);
     html5QrcodeRef.current = scanner;
+
+    // Defense-in-depth: html5-qrcode acquires the camera via getUserMedia
+    // (turning on the hardware indicator) well before its own `isScanning`
+    // flag flips true — that only happens once the <video> element fires
+    // "playing". If we unmount inside that window, the library's stop()
+    // throws ("not running") and clear() only wipes the DOM, so the raw
+    // stream is never told to stop. Reach into the video element directly
+    // and kill its tracks regardless of what state the library thinks it's in.
+    const killAnyActiveStream = () => {
+      const videoEl = containerEl?.querySelector('video');
+      const stream = videoEl?.srcObject;
+      if (stream && typeof stream.getTracks === 'function') {
+        stream.getTracks().forEach((track) => {
+          try {
+            track.stop();
+          } catch {
+            // Already stopped — nothing to do.
+          }
+        });
+      }
+      if (videoEl) {
+        videoEl.srcObject = null;
+      }
+    };
+
+    const teardownScanner = () => {
+      // Grab the stream before stop()/clear() has a chance to tear down or
+      // detach the video element out from under us.
+      killAnyActiveStream();
+      if (scanner.isScanning) {
+        scanner.stop().then(() => scanner.clear()).catch(() => {}).finally(killAnyActiveStream);
+      } else {
+        try {
+          scanner.clear();
+        } catch {
+          // Nothing rendered yet, or already cleared — fine either way.
+        }
+      }
+    };
 
     scanner
       .start(
@@ -140,21 +185,29 @@ export default function Scan() {
           // Fired continuously while no code is in view — not an error worth surfacing.
         }
       )
-      .catch((err) => {
-        setCameraError(
-          'Camera unavailable (permission denied or no camera found). Use "Enter Code Manually" below instead.'
-        );
+      .then(() => {
+        // start() resolves slightly before `isScanning` flips true (that
+        // happens on the video's "playing" event). If the component
+        // unmounted in that gap, finish tearing the camera down now instead
+        // of leaving it running unattended.
+        if (unmounted) {
+          teardownScanner();
+        }
+      })
+      .catch(() => {
+        if (!unmounted) {
+          setCameraError(
+            'Camera unavailable (permission denied or no camera found). Use "Enter Code Manually" below instead.'
+          );
+        }
+        // A stream can be briefly acquired even on a path that ultimately
+        // rejects (e.g. a later constraint failure) — sweep regardless.
+        killAnyActiveStream();
       });
 
     return () => {
-      const activeScanner = html5QrcodeRef.current;
-      if (activeScanner) {
-        if (activeScanner.isScanning) {
-          activeScanner.stop().then(() => activeScanner.clear()).catch(() => {});
-        } else {
-          activeScanner.clear();
-        }
-      }
+      unmounted = true;
+      teardownScanner();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deviceToken]);
