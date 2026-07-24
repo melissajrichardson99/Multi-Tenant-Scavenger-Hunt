@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session as DBSession
 from ..database import get_db
 from ..models import PlayerSession, Character, Scan
@@ -28,6 +29,10 @@ def get_progress(device_token: str, db: DBSession = Depends(get_db)):
         for row in db.query(Scan.character_id).filter(Scan.session_id == session.id).all()
     }
 
+    # Secret characters are completely absent from the response while unfound
+    # (no locked "???" card at all) — only appear once this session has found
+    # them, flagged with is_secret so the frontend can break them into their
+    # own "Secret Discoveries" section.
     character_list = [
         {
             "id": str(character.id),
@@ -38,12 +43,26 @@ def get_progress(device_token: str, db: DBSession = Depends(get_db)):
             "hint": None if character.id in found_character_ids else character.hint,
             "area": None if character.id in found_character_ids else character.area,
             "has_trivia": bool(character.trivia_question) if character.id in found_character_ids else False,
+            "is_secret": character.is_secret,
         }
         for character in characters
+        if not character.is_secret or character.id in found_character_ids
     ]
 
+    total_characters = (
+        db.query(func.count(Character.id))
+        .filter(Character.hunt_id == session.hunt_id, Character.is_secret == False)
+        .scalar()
+    )
+    total_found = (
+        db.query(func.count(Scan.id))
+        .join(Character, Scan.character_id == Character.id)
+        .filter(Scan.session_id == session.id, Character.is_secret == False)
+        .scalar()
+    )
+
     return {
-        "total_found": len(found_character_ids),
-        "total_characters": len(characters),
+        "total_found": total_found,
+        "total_characters": total_characters,
         "characters": character_list,
     }

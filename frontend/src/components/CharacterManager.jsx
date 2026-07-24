@@ -16,6 +16,7 @@ const EMPTY_FORM = {
   trivia_option_d: '',
   trivia_correct_answer: '',
   trivia_description: '',
+  is_secret: false,
 };
 
 export default function CharacterManager({ huntId }) {
@@ -79,6 +80,7 @@ export default function CharacterManager({ huntId }) {
       trivia_option_d: character.trivia_option_d || '',
       trivia_correct_answer: character.trivia_correct_answer || '',
       trivia_description: character.trivia_description || '',
+      is_secret: character.is_secret || false,
     });
     setError('');
     setUploadError('');
@@ -113,6 +115,11 @@ export default function CharacterManager({ huntId }) {
     setError('');
     setSaving(true);
     try {
+      // Blank trivia fields are sent as null rather than empty strings, so
+      // leaving option C/D blank actually clears them in the database
+      // (nullable) instead of storing an empty string.
+      const trimOrNull = (value) => (value && value.trim() !== '' ? value.trim() : null);
+
       const payload = {
         name: formData.name,
         description: formData.description,
@@ -121,13 +128,14 @@ export default function CharacterManager({ huntId }) {
         sort_order: Number(formData.sort_order),
         hint: formData.hint,
         area: formData.area,
-        trivia_question: formData.trivia_question,
-        trivia_option_a: formData.trivia_option_a,
-        trivia_option_b: formData.trivia_option_b,
-        trivia_option_c: formData.trivia_option_c,
-        trivia_option_d: formData.trivia_option_d,
-        trivia_correct_answer: formData.trivia_correct_answer,
-        trivia_description: formData.trivia_description,
+        trivia_question: trimOrNull(formData.trivia_question),
+        trivia_option_a: trimOrNull(formData.trivia_option_a),
+        trivia_option_b: trimOrNull(formData.trivia_option_b),
+        trivia_option_c: trimOrNull(formData.trivia_option_c),
+        trivia_option_d: trimOrNull(formData.trivia_option_d),
+        trivia_correct_answer: trimOrNull(formData.trivia_correct_answer),
+        trivia_description: trimOrNull(formData.trivia_description),
+        is_secret: formData.is_secret,
       };
 
       if (editingId) {
@@ -273,6 +281,18 @@ export default function CharacterManager({ huntId }) {
             />
           </div>
 
+          <div className="form-group">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={formData.is_secret}
+                onChange={e => setFormData({ ...formData, is_secret: e.target.checked })}
+                style={{ width: 'auto' }}
+              />
+              Secret character (doesn't count toward hunt completion, hidden until found)
+            </label>
+          </div>
+
           <h4 style={{ marginTop: '1.5rem', marginBottom: '0.75rem' }}>Trivia Mini-Game (optional)</h4>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1rem' }}>
             Leave the question blank to skip trivia entirely for this character — the "Fun Fact" button
@@ -389,7 +409,14 @@ export default function CharacterManager({ huntId }) {
                       </div>
                     )}
                   </td>
-                  <td style={{ padding: '0.5rem' }}>{char.name}</td>
+                  <td style={{ padding: '0.5rem' }}>
+                    {char.name}
+                    {char.is_secret && (
+                      <span style={{ marginLeft: '0.5rem', fontSize: '0.7rem', color: 'var(--text-muted)', border: '1px solid var(--card-border)', borderRadius: '10px', padding: '0.1rem 0.5rem' }}>
+                        🤫 Secret
+                      </span>
+                    )}
+                  </td>
                   <td style={{ padding: '0.5rem' }}>{char.points}</td>
                   <td style={{ padding: '0.5rem' }}>
                     {char.qr_code_image_url ? (

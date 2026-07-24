@@ -12,6 +12,27 @@ router = APIRouter(prefix="/api/admin/characters", tags=["Admin Characters"])
 public_router = APIRouter(prefix="/api/characters", tags=["Characters"])
 
 
+def _validate_trivia_fields(question, description, option_a, option_b, option_c, option_d, correct_answer):
+    """
+    Trivia is entirely optional per-character (presence of trivia_question is
+    what turns the feature on). Once a question is set, require the
+    description and at least options a/b — c/d stay optional so 2- or
+    3-option questions are allowed — and require trivia_correct_answer to
+    point at one of the options that's actually filled in.
+    """
+    if not question:
+        return
+
+    if not description:
+        raise HTTPException(status_code=400, detail="trivia_description is required when trivia_question is set")
+    if not option_a or not option_b:
+        raise HTTPException(status_code=400, detail="trivia_option_a and trivia_option_b are required when trivia_question is set")
+
+    options = {"a": option_a, "b": option_b, "c": option_c, "d": option_d}
+    if not correct_answer or correct_answer not in options or not options[correct_answer]:
+        raise HTTPException(status_code=400, detail="trivia_correct_answer must point to a filled-in option")
+
+
 @public_router.get("/lookup-hunt")
 def lookup_hunt_by_code(code: str, db: DBSession = Depends(get_db)):
     """
@@ -196,6 +217,7 @@ def get_admin_characters(hunt_id: str = None, db: DBSession = Depends(get_db), a
             "trivia_option_d": c.trivia_option_d,
             "trivia_correct_answer": c.trivia_correct_answer,
             "trivia_description": c.trivia_description,
+            "is_secret": c.is_secret,
             "qr_code_image_url": public_url(QR_CODES_BUCKET, f"{c.qr_code_value}.png"),
         }
         for c in characters
@@ -217,6 +239,16 @@ def create_admin_character(payload: dict, db: DBSession = Depends(get_db), admin
         raise HTTPException(status_code=400, detail="hunt_id is required")
     if not name:
         raise HTTPException(status_code=400, detail="name is required")
+
+    _validate_trivia_fields(
+        payload.get("trivia_question"),
+        payload.get("trivia_description"),
+        payload.get("trivia_option_a"),
+        payload.get("trivia_option_b"),
+        payload.get("trivia_option_c"),
+        payload.get("trivia_option_d"),
+        payload.get("trivia_correct_answer"),
+    )
 
     # Generate a unique QR code value
     qr_code_value = generate_unique_qr_code(db)
@@ -244,6 +276,7 @@ def create_admin_character(payload: dict, db: DBSession = Depends(get_db), admin
         trivia_option_d=payload.get("trivia_option_d"),
         trivia_correct_answer=payload.get("trivia_correct_answer"),
         trivia_description=payload.get("trivia_description"),
+        is_secret=payload.get("is_secret", False),
     )
     db.add(character)
     db.commit()
@@ -267,6 +300,7 @@ def create_admin_character(payload: dict, db: DBSession = Depends(get_db), admin
         "trivia_option_d": character.trivia_option_d,
         "trivia_correct_answer": character.trivia_correct_answer,
         "trivia_description": character.trivia_description,
+        "is_secret": character.is_secret,
         "qr_code_image_url": qr_code_image_url,
     }
 
@@ -282,10 +316,25 @@ def update_admin_character(payload: dict, db: DBSession = Depends(get_db), admin
     if not character:
         raise HTTPException(status_code=404, detail="Character not found")
 
+    # Validate against the effective post-update state: fields not present in
+    # the payload keep their existing value on the character.
+    def _effective(field):
+        return payload[field] if field in payload else getattr(character, field)
+
+    _validate_trivia_fields(
+        _effective("trivia_question"),
+        _effective("trivia_description"),
+        _effective("trivia_option_a"),
+        _effective("trivia_option_b"),
+        _effective("trivia_option_c"),
+        _effective("trivia_option_d"),
+        _effective("trivia_correct_answer"),
+    )
+
     updatable = [
         "name", "description", "image_url", "points", "sort_order", "hint", "area",
         "trivia_question", "trivia_option_a", "trivia_option_b", "trivia_option_c",
-        "trivia_option_d", "trivia_correct_answer", "trivia_description",
+        "trivia_option_d", "trivia_correct_answer", "trivia_description", "is_secret",
     ]
     for field in updatable:
         if field in payload:
@@ -312,6 +361,7 @@ def update_admin_character(payload: dict, db: DBSession = Depends(get_db), admin
         "trivia_option_d": character.trivia_option_d,
         "trivia_correct_answer": character.trivia_correct_answer,
         "trivia_description": character.trivia_description,
+        "is_secret": character.is_secret,
         "qr_code_image_url": public_url(QR_CODES_BUCKET, f"{character.qr_code_value}.png"),
     }
 

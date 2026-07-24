@@ -8,19 +8,21 @@ function SortBadge({ sortOrder }) {
   return (
     <div style={{
       position: 'absolute',
-      top: '8px',
-      left: '8px',
-      background: 'none',
-      color: 'var(--text-primary)',
+      top: '10px',
+      left: '10px',
+      background: 'rgba(0, 0, 0, 0.6)',
+      color: '#ffffff',
       fontSize: '0.7rem',
       fontWeight: '700',
-      width: '20px',
+      minWidth: '20px',
       height: '20px',
+      padding: '0 4px',
       borderRadius: '10px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      zIndex: 1,
+      boxShadow: '0 1px 4px rgba(0, 0, 0, 0.3)',
+      zIndex: 2,
     }}>
       {sortOrder}
     </div>
@@ -125,7 +127,12 @@ export default function Progress() {
     });
   };
 
-  const characters = progress?.characters || [];
+  const allCharacters = progress?.characters || [];
+  // Secret characters are broken out into their own "Secret Discoveries"
+  // section below and never appear in the main gallery/areas — the API only
+  // ever returns them once found, so this is always a found-only list.
+  const characters = allCharacters.filter(c => !c.is_secret);
+  const secretCharactersFound = allCharacters.filter(c => c.is_secret);
   const hasAreas = characters.some(c => c.area);
   const foundCharacters = characters.filter(c => c.found);
   const lockedCharacters = characters.filter(c => !c.found);
@@ -224,6 +231,18 @@ export default function Progress() {
           <h3 style={{ marginBottom: '1rem' }}>Characters Gallery</h3>
           <div className="character-grid">
             {characters.map((char) => (
+              <CharacterCard key={char.id} char={char} onClick={() => handleCardClick(char)} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Secret Discoveries — bonus characters this session has found; hidden entirely until then */}
+      {secretCharactersFound.length > 0 && (
+        <div>
+          <h3 style={{ marginBottom: '1rem' }}>🤫 Secret Discoveries</h3>
+          <div className="character-grid">
+            {secretCharactersFound.map((char) => (
               <CharacterCard key={char.id} char={char} onClick={() => handleCardClick(char)} />
             ))}
           </div>

@@ -23,7 +23,10 @@ def list_active_hunts(db: Session = Depends(get_db)):
 
     character_counts = dict(
         db.query(Character.hunt_id, func.count(Character.id))
-        .filter(Character.hunt_id.in_([hunt.id for hunt, _ in rows]))
+        .filter(
+            Character.hunt_id.in_([hunt.id for hunt, _ in rows]),
+            Character.is_secret == False,
+        )
         .group_by(Character.hunt_id)
         .all()
     )
@@ -60,7 +63,9 @@ def get_public_hunt(slug: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Hunt not found")
 
     total_characters = (
-        db.query(Character).filter(Character.hunt_id == hunt.id).count()
+        db.query(Character)
+        .filter(Character.hunt_id == hunt.id, Character.is_secret == False)
+        .count()
     )
 
     return {
@@ -168,9 +173,11 @@ def get_hunt_stats(hunt_id: str, db: Session = Depends(get_db), admin: AdminUser
         .scalar()
     )
 
+    # Secret characters never count toward the completion denominator —
+    # finding all of them should never be required for 100% completion.
     total_characters = (
         db.query(func.count(Character.id))
-        .filter(Character.hunt_id == hunt_id)
+        .filter(Character.hunt_id == hunt_id, Character.is_secret == False)
         .scalar()
     )
 
@@ -179,7 +186,8 @@ def get_hunt_stats(hunt_id: str, db: Session = Depends(get_db), admin: AdminUser
         completed_sessions = (
             db.query(Scan.session_id)
             .join(PlayerSession, Scan.session_id == PlayerSession.id)
-            .filter(PlayerSession.hunt_id == hunt_id)
+            .join(Character, Scan.character_id == Character.id)
+            .filter(PlayerSession.hunt_id == hunt_id, Character.is_secret == False)
             .group_by(Scan.session_id)
             .having(func.count(Scan.character_id) == total_characters)
             .count()

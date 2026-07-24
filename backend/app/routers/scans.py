@@ -56,14 +56,17 @@ def record_scan(payload: dict, db: DBSession = Depends(get_db)):
         db.rollback()
         return {"success": False, "reason": "already_scanned"}
 
+    # Secret characters never count toward the total or the found count —
+    # finding all of them should never be required for 100% completion.
     total_characters = (
         db.query(func.count(Character.id))
-        .filter(Character.hunt_id == session.hunt_id)
+        .filter(Character.hunt_id == session.hunt_id, Character.is_secret == False)
         .scalar()
     )
     total_found = (
         db.query(func.count(Scan.id))
-        .filter(Scan.session_id == session.id)
+        .join(Character, Scan.character_id == Character.id)
+        .filter(Scan.session_id == session.id, Character.is_secret == False)
         .scalar()
     )
 
