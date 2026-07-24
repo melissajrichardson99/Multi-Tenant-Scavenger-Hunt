@@ -182,12 +182,12 @@ export default function Admin() {
     <div style={{ width: '100%' }}>
       
       {/* Top Banner */}
-      <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+      <div className="card admincard" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <span style={{ fontSize: '0.8rem', color: 'var(--primary-color)', fontWeight: 'bold' }}>ADMIN PORTAL</span>
           <h2>Scavenger Hunt Dashboard</h2>
         </div>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <ChangePassword />
           <button className="btn btn-secondary" style={{ width: 'auto' }} onClick={handleLogout}>
             Sign Out
