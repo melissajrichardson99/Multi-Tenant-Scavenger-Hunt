@@ -13,7 +13,8 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
-      '/qr_codes': {
+      // Local-disk storage (QR PNGs, uploaded character images) in development
+      '/uploads': {
         target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false,

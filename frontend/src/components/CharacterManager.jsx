@@ -53,6 +53,9 @@ export default function CharacterManager({ huntId }) {
     setShowForm(false);
     setEditingId(null);
     setDeleteConfirmId(null);
+    // Reload only when the selected hunt changes; refreshCharacters is
+    // recreated every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [huntId]);
 
   const openAddForm = () => {

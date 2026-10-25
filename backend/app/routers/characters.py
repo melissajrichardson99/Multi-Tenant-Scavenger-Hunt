@@ -3,13 +3,82 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy import func
 from sqlalchemy.orm import Session as DBSession
 from ..database import get_db
-from ..models import Character, PlayerSession, Scan, AdminUser
+from ..models import Character, Hunt, PlayerSession, Scan, AdminUser
 from ..auth import get_current_admin
-from ..qr_codes import QR_CODES_DIR, generate_unique_qr_code, generate_and_upload_qr_image, normalize_code
-from ..storage import ALLOWED_IMAGE_CONTENT_TYPES, MAX_UPLOAD_BYTES, QR_CODES_BUCKET, upload_character_image, public_url
+from ..qr_codes import generate_unique_qr_code, generate_and_upload_qr_image, normalize_code
+from ..storage import (
+    ALLOWED_IMAGE_CONTENT_TYPES,
+    MAX_UPLOAD_BYTES,
+    QR_CODES_BUCKET,
+    delete_local_object,
+    upload_character_image,
+    public_url,
+)
 
 router = APIRouter(prefix="/api/admin/characters", tags=["Admin Characters"])
 public_router = APIRouter(prefix="/api/characters", tags=["Characters"])
+
+
+def _parse_uuid(value, not_found_detail):
+    try:
+        return uuid.UUID(str(value))
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=404, detail=not_found_detail)
+
+
+def _scoped_hunt(db: DBSession, admin: AdminUser, hunt_id) -> Hunt:
+    """
+    Returns the hunt if it exists and the admin may manage it, else 404.
+    Same rule as the hunt routes in hunts.py: an organization-scoped admin
+    only sees their own organization's hunts; a super-admin
+    (organization_id is None) sees every organization's.
+    """
+    query = db.query(Hunt).filter(Hunt.id == _parse_uuid(hunt_id, "Hunt not found"))
+    if admin.organization_id:
+        query = query.filter(Hunt.organization_id == admin.organization_id)
+    hunt = query.first()
+    if not hunt:
+        raise HTTPException(status_code=404, detail="Hunt not found")
+    return hunt
+
+
+def _scoped_character(db: DBSession, admin: AdminUser, character_id) -> Character:
+    """Returns the character if its hunt belongs to an organization the admin may manage, else 404."""
+    query = (
+        db.query(Character)
+        .join(Hunt, Character.hunt_id == Hunt.id)
+        .filter(Character.id == _parse_uuid(character_id, "Character not found"))
+    )
+    if admin.organization_id:
+        query = query.filter(Hunt.organization_id == admin.organization_id)
+    character = query.first()
+    if not character:
+        raise HTTPException(status_code=404, detail="Character not found")
+    return character
+
+
+def _serialize_character(character: Character) -> dict:
+    return {
+        "id": str(character.id),
+        "hunt_id": str(character.hunt_id),
+        "name": character.name,
+        "description": character.description,
+        "image_url": character.image_url,
+        "points": character.points,
+        "qr_code_value": character.qr_code_value,
+        "sort_order": character.sort_order,
+        "hint": character.hint,
+        "area": character.area,
+        "trivia_question": character.trivia_question,
+        "trivia_option_a": character.trivia_option_a,
+        "trivia_option_b": character.trivia_option_b,
+        "trivia_option_c": character.trivia_option_c,
+        "trivia_option_d": character.trivia_option_d,
+        "trivia_correct_answer": character.trivia_correct_answer,
+        "trivia_description": character.trivia_description,
+        "is_secret": character.is_secret,
+        "qr_code_image_url": public_url(QR_CODES_BUCKET, f"{character.qr_code_value}.png"),
+    }
 
 
 def _validate_trivia_fields(question, description, option_a, option_b, option_c, option_d, correct_answer):
@@ -104,20 +173,20 @@ def get_character_detail(character_id: str, device_token: str, db: DBSession = D
     }
 
 
-@public_router.get("/{character_id}/trivia")
-def get_character_trivia(character_id: str, device_token: str, db: DBSession = Depends(get_db)):
+def _owned_trivia_character(db: DBSession, character_id: str, device_token: str) -> Character:
     """
-    Public trivia lookup for the "Fun Fact" mini-game. Same ownership-gated
-    pattern as the revisit endpoint above: requires a matching Scan row for
-    this device, and returns a generic 404 for any failure (unowned character,
-    nonexistent character, or a character with no trivia_question set) so a
-    guest can't probe for character IDs, other sessions' finds, or which
-    characters happen to have trivia configured.
+    Ownership gate shared by both trivia endpoints, same pattern as the
+    revisit endpoint above: requires a matching Scan row for this device,
+    and raises a generic 404 for any failure (unowned character, nonexistent
+    character, or a character with no trivia_question set) so a guest can't
+    probe for character IDs, other sessions' finds, or which characters
+    happen to have trivia configured.
     """
+    not_found = HTTPException(status_code=404, detail="Trivia not found")
     try:
         character_uuid = uuid.UUID(character_id)
     except (ValueError, TypeError):
-        raise HTTPException(status_code=404, detail="Trivia not found")
+        raise not_found
 
     session = (
         db.query(PlayerSession)
@@ -125,7 +194,7 @@ def get_character_trivia(character_id: str, device_token: str, db: DBSession = D
         .first()
     )
     if not session:
-        raise HTTPException(status_code=404, detail="Trivia not found")
+        raise not_found
 
     character = (
         db.query(Character)
@@ -133,18 +202,27 @@ def get_character_trivia(character_id: str, device_token: str, db: DBSession = D
         .first()
     )
     if not character:
-        raise HTTPException(status_code=404, detail="Trivia not found")
+        raise not_found
 
     scan = (
         db.query(Scan)
         .filter(Scan.session_id == session.id, Scan.character_id == character.id)
         .first()
     )
-    if not scan:
-        raise HTTPException(status_code=404, detail="Trivia not found")
+    if not scan or not character.trivia_question:
+        raise not_found
 
-    if not character.trivia_question:
-        raise HTTPException(status_code=404, detail="Trivia not found")
+    return character
+
+
+@public_router.get("/{character_id}/trivia")
+def get_character_trivia(character_id: str, device_token: str, db: DBSession = Depends(get_db)):
+    """
+    Public trivia question for the "Fun Fact" mini-game. Returns the question
+    and options only — the correct answer and the fact stay hidden until the
+    guest submits an answer to the endpoint below.
+    """
+    character = _owned_trivia_character(db, character_id, device_token)
 
     return {
         "id": str(character.id),
@@ -153,7 +231,30 @@ def get_character_trivia(character_id: str, device_token: str, db: DBSession = D
         "trivia_option_b": character.trivia_option_b,
         "trivia_option_c": character.trivia_option_c,
         "trivia_option_d": character.trivia_option_d,
-        "trivia_correct_answer": character.trivia_correct_answer,
+    }
+
+
+@public_router.post("/{character_id}/trivia/answer")
+def answer_character_trivia(character_id: str, payload: dict, db: DBSession = Depends(get_db)):
+    """
+    Checks a guest's answer and reveals the correct option plus the fun-fact
+    description (shown whether or not they got it right).
+    """
+    character = _owned_trivia_character(db, character_id, payload.get("device_token"))
+
+    answer = payload.get("answer")
+    options = {
+        "a": character.trivia_option_a,
+        "b": character.trivia_option_b,
+        "c": character.trivia_option_c,
+        "d": character.trivia_option_d,
+    }
+    if answer not in options or not options[answer]:
+        raise HTTPException(status_code=400, detail="answer must be one of the question's options")
+
+    return {
+        "correct": answer == character.trivia_correct_answer,
+        "correct_answer": character.trivia_correct_answer,
         "trivia_description": character.trivia_description,
     }
 
@@ -164,9 +265,10 @@ async def upload_admin_character_image(
     admin: AdminUser = Depends(get_current_admin),
 ):
     """
-    Uploads a character image file to the "character-images" Supabase
-    Storage bucket and returns its public URL, for the admin form to drop
-    into the character's image_url field. Does not touch the database.
+    Uploads a character image file to the "character-images" bucket and
+    returns its public URL, for the admin form to drop into the character's
+    image_url field. Doesn't read or write any organization's data, so it
+    needs an authenticated admin but no organization scoping.
     """
     if file.content_type not in ALLOWED_IMAGE_CONTENT_TYPES:
         raise HTTPException(
@@ -193,44 +295,27 @@ async def upload_admin_character_image(
 
 @router.get("")
 def get_admin_characters(hunt_id: str = None, db: DBSession = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
-    """List all characters, optionally filtered by hunt_id."""
+    """List characters the admin may manage, optionally filtered by hunt_id."""
     query = db.query(Character)
     if hunt_id:
-        query = query.filter(Character.hunt_id == hunt_id)
+        hunt = _scoped_hunt(db, admin, hunt_id)
+        query = query.filter(Character.hunt_id == hunt.id)
+    elif admin.organization_id:
+        query = (
+            query.join(Hunt, Character.hunt_id == Hunt.id)
+            .filter(Hunt.organization_id == admin.organization_id)
+        )
     characters = query.order_by(Character.sort_order).all()
-    return [
-        {
-            "id": str(c.id),
-            "hunt_id": str(c.hunt_id),
-            "name": c.name,
-            "description": c.description,
-            "image_url": c.image_url,
-            "points": c.points,
-            "qr_code_value": c.qr_code_value,
-            "sort_order": c.sort_order,
-            "hint": c.hint,
-            "area": c.area,
-            "trivia_question": c.trivia_question,
-            "trivia_option_a": c.trivia_option_a,
-            "trivia_option_b": c.trivia_option_b,
-            "trivia_option_c": c.trivia_option_c,
-            "trivia_option_d": c.trivia_option_d,
-            "trivia_correct_answer": c.trivia_correct_answer,
-            "trivia_description": c.trivia_description,
-            "is_secret": c.is_secret,
-            "qr_code_image_url": public_url(QR_CODES_BUCKET, f"{c.qr_code_value}.png"),
-        }
-        for c in characters
-    ]
+    return [_serialize_character(c) for c in characters]
 
 
 @router.post("")
 def create_admin_character(payload: dict, db: DBSession = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
     """
-    Create a new character.  Automatically generates a unique, human-friendly
-    qr_code_value (e.g. K7XQ-2M9P-T4RN) and uploads a QR code PNG to the
-    "qr-codes" Supabase Storage bucket.  Returns the created character
-    including qr_code_image_url.
+    Create a new character in a hunt the admin may manage.  Automatically
+    generates a unique, human-friendly qr_code_value (e.g. K7XQ-2M9P-T4RN)
+    and stores a QR code PNG in the "qr-codes" bucket.  Returns the created
+    character including qr_code_image_url.
     """
     hunt_id = payload.get("hunt_id")
     name = payload.get("name")
@@ -239,6 +324,8 @@ def create_admin_character(payload: dict, db: DBSession = Depends(get_db), admin
         raise HTTPException(status_code=400, detail="hunt_id is required")
     if not name:
         raise HTTPException(status_code=400, detail="name is required")
+
+    hunt = _scoped_hunt(db, admin, hunt_id)
 
     _validate_trivia_fields(
         payload.get("trivia_question"),
@@ -253,14 +340,14 @@ def create_admin_character(payload: dict, db: DBSession = Depends(get_db), admin
     # Generate a unique QR code value
     qr_code_value = generate_unique_qr_code(db)
 
-    # Generate the QR image and upload it to Supabase Storage
+    # Generate the QR image and store it
     try:
-        qr_code_image_url = generate_and_upload_qr_image(qr_code_value)
+        generate_and_upload_qr_image(qr_code_value)
     except RuntimeError as e:
         raise HTTPException(status_code=500, detail=str(e))
 
     character = Character(
-        hunt_id=hunt_id,
+        hunt_id=hunt.id,
         name=name,
         description=payload.get("description"),
         image_url=payload.get("image_url"),
@@ -282,39 +369,17 @@ def create_admin_character(payload: dict, db: DBSession = Depends(get_db), admin
     db.commit()
     db.refresh(character)
 
-    return {
-        "id": str(character.id),
-        "hunt_id": str(character.hunt_id),
-        "name": character.name,
-        "description": character.description,
-        "image_url": character.image_url,
-        "points": character.points,
-        "qr_code_value": character.qr_code_value,
-        "sort_order": character.sort_order,
-        "hint": character.hint,
-        "area": character.area,
-        "trivia_question": character.trivia_question,
-        "trivia_option_a": character.trivia_option_a,
-        "trivia_option_b": character.trivia_option_b,
-        "trivia_option_c": character.trivia_option_c,
-        "trivia_option_d": character.trivia_option_d,
-        "trivia_correct_answer": character.trivia_correct_answer,
-        "trivia_description": character.trivia_description,
-        "is_secret": character.is_secret,
-        "qr_code_image_url": qr_code_image_url,
-    }
+    return _serialize_character(character)
 
 
 @router.patch("")
 def update_admin_character(payload: dict, db: DBSession = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
-    """Update mutable fields on a character (does not regenerate QR code)."""
+    """Update mutable fields on a character the admin may manage (does not regenerate QR code)."""
     character_id = payload.get("id")
     if not character_id:
         raise HTTPException(status_code=400, detail="id is required")
 
-    character = db.query(Character).filter(Character.id == character_id).first()
-    if not character:
-        raise HTTPException(status_code=404, detail="Character not found")
+    character = _scoped_character(db, admin, character_id)
 
     # Validate against the effective post-update state: fields not present in
     # the payload keep their existing value on the character.
@@ -331,6 +396,8 @@ def update_admin_character(payload: dict, db: DBSession = Depends(get_db), admin
         _effective("trivia_correct_answer"),
     )
 
+    # hunt_id is deliberately not updatable, so a character can't be moved
+    # into another organization's hunt.
     updatable = [
         "name", "description", "image_url", "points", "sort_order", "hint", "area",
         "trivia_question", "trivia_option_a", "trivia_option_b", "trivia_option_c",
@@ -343,40 +410,15 @@ def update_admin_character(payload: dict, db: DBSession = Depends(get_db), admin
     db.commit()
     db.refresh(character)
 
-    return {
-        "id": str(character.id),
-        "hunt_id": str(character.hunt_id),
-        "name": character.name,
-        "description": character.description,
-        "image_url": character.image_url,
-        "points": character.points,
-        "qr_code_value": character.qr_code_value,
-        "sort_order": character.sort_order,
-        "hint": character.hint,
-        "area": character.area,
-        "trivia_question": character.trivia_question,
-        "trivia_option_a": character.trivia_option_a,
-        "trivia_option_b": character.trivia_option_b,
-        "trivia_option_c": character.trivia_option_c,
-        "trivia_option_d": character.trivia_option_d,
-        "trivia_correct_answer": character.trivia_correct_answer,
-        "trivia_description": character.trivia_description,
-        "is_secret": character.is_secret,
-        "qr_code_image_url": public_url(QR_CODES_BUCKET, f"{character.qr_code_value}.png"),
-    }
+    return _serialize_character(character)
 
 
 @router.delete("")
 def delete_admin_character(character_id: str, db: DBSession = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
-    """Delete a character by ID."""
-    character = db.query(Character).filter(Character.id == character_id).first()
-    if not character:
-        raise HTTPException(status_code=404, detail="Character not found")
+    """Delete a character the admin may manage, by ID."""
+    character = _scoped_character(db, admin, character_id)
 
-    # Optionally remove the QR image file from disk
-    qr_file = QR_CODES_DIR / f"{character.qr_code_value}.png"
-    if qr_file.exists():
-        qr_file.unlink()
+    delete_local_object(QR_CODES_BUCKET, f"{character.qr_code_value}.png")
 
     db.delete(character)
     db.commit()

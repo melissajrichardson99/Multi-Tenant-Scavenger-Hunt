@@ -70,7 +70,6 @@ export default function Progress() {
   const navigate = useNavigate();
   const { activeOrg } = useOrgTheme();
   const [loading, setLoading] = useState(true);
-  const [deviceToken, setDeviceToken] = useState('');
   const [progress, setProgress] = useState(null);
   const [error, setError] = useState('');
   const [hintCharacter, setHintCharacter] = useState(null);
@@ -82,7 +81,6 @@ export default function Progress() {
       navigate(activeOrg?.slug ? `/start/${activeOrg.slug}` : '/');
       return;
     }
-    setDeviceToken(token);
 
     apiClient.getProgress(token)
       .then(data => {
@@ -99,6 +97,15 @@ export default function Progress() {
     return (
       <div className="card pulse" style={{ textAlign: 'center', marginTop: '2rem' }}>
         <h2>Loading Progress...</h2>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="card" style={{ borderColor: 'var(--danger-color)', marginTop: '2rem' }}>
+        <h2 style={{ color: 'var(--danger-color)' }}>Couldn't load your progress</h2>
+        <p>{error}</p>
       </div>
     );
   }

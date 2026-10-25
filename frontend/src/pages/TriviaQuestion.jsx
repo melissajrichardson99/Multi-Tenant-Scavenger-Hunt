@@ -18,7 +18,11 @@ export default function TriviaQuestion() {
   const [trivia, setTrivia] = useState(null);
   const [failed, setFailed] = useState(false);
   const [selected, setSelected] = useState(null);
-  const [answered, setAnswered] = useState(false);
+  // Server's verdict for the selected option: { correct, correct_answer,
+  // trivia_description }. The answer is never sent before the guest picks.
+  const [result, setResult] = useState(null);
+  const [checking, setChecking] = useState(false);
+  const answered = result !== null;
 
   useEffect(() => {
     const deviceToken = localStorage.getItem('device_token');
@@ -51,12 +55,20 @@ export default function TriviaQuestion() {
     return null;
   }
 
-  const isCorrect = selected === trivia.trivia_correct_answer;
+  const isCorrect = result?.correct;
 
-  const handleSelect = (key) => {
-    if (answered) return;
+  const handleSelect = async (key) => {
+    if (answered || checking) return;
     setSelected(key);
-    setAnswered(true);
+    setChecking(true);
+    try {
+      const data = await apiClient.answerTrivia(characterId, localStorage.getItem('device_token'), key);
+      setResult(data);
+    } catch {
+      setSelected(null);
+    } finally {
+      setChecking(false);
+    }
   };
 
   return (
@@ -74,7 +86,7 @@ export default function TriviaQuestion() {
             if (!optionText) return null;
 
             const isSelected = selected === key;
-            const isThisCorrect = key === trivia.trivia_correct_answer;
+            const isThisCorrect = answered && key === result.correct_answer;
 
             let borderColor = 'var(--card-border)';
             if (answered && isThisCorrect) {
@@ -89,7 +101,7 @@ export default function TriviaQuestion() {
               <button
                 key={key}
                 onClick={() => handleSelect(key)}
-                disabled={answered}
+                disabled={answered || checking}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -122,7 +134,7 @@ export default function TriviaQuestion() {
               {isCorrect ? '🎉 Correct!' : '❌ Not quite!'}
             </div>
 
-            {trivia.trivia_description && (
+            {result.trivia_description && (
               <p style={{
                 fontSize: '1.05rem',
                 lineHeight: '1.7',
@@ -133,7 +145,7 @@ export default function TriviaQuestion() {
                 borderLeft: '4px solid var(--secondary-color)',
                 margin: 0,
               }}>
-                {trivia.trivia_description}
+                {result.trivia_description}
               </p>
             )}
 

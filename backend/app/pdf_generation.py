@@ -21,6 +21,8 @@ from reportlab.lib.units import inch
 from reportlab.lib.utils import ImageReader, simpleSplit
 from reportlab.pdfgen import canvas
 
+from .storage import QR_CODES_BUCKET, read_object
+
 GRID_COLS = 2
 GRID_ROWS = 3
 CELLS_PER_PAGE = GRID_COLS * GRID_ROWS
@@ -46,10 +48,8 @@ STAFF_COL_X = {
 }
 
 
-def _fetch_qr_image(url: str) -> ImageReader:
-    response = httpx.get(url, timeout=30.0)
-    response.raise_for_status()
-    return ImageReader(io.BytesIO(response.content))
+def _fetch_qr_image(qr_code_value: str) -> ImageReader:
+    return ImageReader(io.BytesIO(read_object(QR_CODES_BUCKET, f"{qr_code_value}.png")))
 
 
 def _draw_cut_lines(c: canvas.Canvas) -> None:
@@ -90,12 +90,12 @@ def _draw_guest_sign_pages(c: canvas.Canvas, characters: list[dict]) -> None:
             qr_y = cell_y + (CELL_HEIGHT - qr_size) / 2 + 0.2 * inch
 
             try:
-                image = _fetch_qr_image(character["qr_code_image_url"])
+                image = _fetch_qr_image(character["qr_code_value"])
                 c.drawImage(
                     image, qr_x, qr_y, width=qr_size, height=qr_size,
                     preserveAspectRatio=True, mask="auto",
                 )
-            except (httpx.HTTPError, OSError):
+            except (httpx.HTTPError, OSError, RuntimeError):
                 c.setFont("Helvetica", 8)
                 c.drawCentredString(
                     cell_x + CELL_WIDTH / 2, cell_y + CELL_HEIGHT / 2,
@@ -163,7 +163,7 @@ def _draw_staff_reference_pages(c: canvas.Canvas, hunt_name: str, characters: li
 def build_qr_code_pdf(hunt_name: str, characters: list[dict]) -> bytes:
     """
     characters: list of dicts (already ordered by sort_order) with keys
-    "name", "hint", "area", "qr_code_image_url". Index numbers (matching
+    "name", "hint", "area", "qr_code_value". Index numbers (matching
     Guest Sign / Staff Reference rows) are 1-based position in this list.
     """
     buffer = io.BytesIO()

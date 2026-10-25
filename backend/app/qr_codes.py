@@ -1,16 +1,16 @@
 """
 Shared helpers for generating human-friendly QR code values and the QR
-image files that encode them.  Used by the admin character-creation
-endpoint (characters.py) and by the one-time regeneration script
-(regenerate_qr_codes.py) so both stay in sync.
+images that encode them.  Used by the admin character-creation endpoint
+(characters.py), the demo seed and scripts/upload_qr_images.py so they all
+stay in sync.
 """
 
 import io
 import re
 import random
-from pathlib import Path
 from sqlalchemy.orm import Session as DBSession
 
+from .config import PUBLIC_BASE_URL
 from .models import Character
 from .storage import QR_CODES_BUCKET, upload_to_bucket
 
@@ -25,9 +25,6 @@ except ImportError:
 CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
 CODE_LENGTH = 12
 GROUP_SIZE = 4
-
-# Directory where QR code images are stored (relative to project root).
-QR_CODES_DIR = Path(__file__).resolve().parents[2] / "qr_codes"
 
 
 def generate_short_code() -> str:
@@ -55,25 +52,9 @@ def normalize_code(value: str) -> str:
     return re.sub(r"[\s-]", "", value or "").upper()
 
 
-def generate_qr_image(qr_code_value: str) -> str:
-    """
-    Generate a QR code PNG encoding the scan URL and save it to
-    qr_codes/{qr_code_value}.png.  Returns the filename (not the full path).
-
-    Retained for the old local-disk mount (see main.py) — current
-    character creation/migration uses generate_and_upload_qr_image below.
-    """
-    if not QR_AVAILABLE:
-        raise RuntimeError("qrcode library is not installed")
-
-    QR_CODES_DIR.mkdir(parents=True, exist_ok=True)
-
-    scan_url = f"http://localhost:3000/scan?code={qr_code_value}"
-    img = qrcode.make(scan_url)
-    filename = f"{qr_code_value}.png"
-    filepath = QR_CODES_DIR / filename
-    img.save(str(filepath))
-    return filename
+def scan_url_for(qr_code_value: str) -> str:
+    """The URL a printed QR code encodes: the guest app's /scan page on PUBLIC_BASE_URL."""
+    return f"{PUBLIC_BASE_URL}/scan?code={qr_code_value}"
 
 
 def generate_qr_image_bytes(qr_code_value: str) -> bytes:
@@ -81,8 +62,7 @@ def generate_qr_image_bytes(qr_code_value: str) -> bytes:
     if not QR_AVAILABLE:
         raise RuntimeError("qrcode library is not installed")
 
-    scan_url = f"http://localhost:3000/scan?code={qr_code_value}"
-    img = qrcode.make(scan_url)
+    img = qrcode.make(scan_url_for(qr_code_value))
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
     return buffer.getvalue()
@@ -91,7 +71,7 @@ def generate_qr_image_bytes(qr_code_value: str) -> bytes:
 def generate_and_upload_qr_image(qr_code_value: str) -> str:
     """
     Generate a QR code PNG encoding the scan URL and upload it to the
-    "qr-codes" Supabase Storage bucket under {qr_code_value}.png.
+    "qr-codes" bucket (see storage.py) under {qr_code_value}.png.
     Returns the public URL. Raises RuntimeError if generation or upload fails.
     """
     image_bytes = generate_qr_image_bytes(qr_code_value)

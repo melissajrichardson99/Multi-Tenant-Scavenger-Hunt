@@ -144,14 +144,3 @@ def reactivate_admin_user(admin_user_id: str, db: Session = Depends(get_db), adm
 
     org_names = {org.id: org.name for org in db.query(Organization).all()}
     return _serialize_admin_user(target, org_names)
-
-@router.post("/reward-tiers")
-def create_reward_tier(payload: dict, db: Session = Depends(get_db), admin: AdminUser = Depends(get_current_admin)):
-    return {
-        "id": "66666666-7777-8888-9999-000000000000",
-        "hunt_id": payload.get("hunt_id"),
-        "threshold_type": payload.get("threshold_type"),
-        "threshold_value": payload.get("threshold_value"),
-        "reward_description": payload.get("reward_description"),
-        "reward_code": payload.get("reward_code")
-    }

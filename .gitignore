@@ -232,3 +232,6 @@ yarn-error.log*
 # Generated QR code images (regeneratable, not source)
 qr_codes/
 backend/qr_codes/
+# Local development database and local-disk file storage
+*.db
+/uploads/

@@ -1,37 +1,30 @@
+# Re-renders every character's QR code PNG from its existing qr_code_value and stores it (e.g. after changing PUBLIC_BASE_URL).
 """
-migrate_qr_codes_to_supabase.py — One-time script to move every existing
-Character's QR code image from local disk (backend/qr_codes/) to the
-"qr-codes" Supabase Storage bucket.
+QR images encode {PUBLIC_BASE_URL}/scan?code=..., so they need re-rendering
+whenever PUBLIC_BASE_URL changes (for example when moving from local
+development to a real domain). qr_code_value itself is left untouched, so
+already-recorded scans and the codes guests type in by hand keep working.
 
-qr_code_image_url is not a stored database column — it's computed on the
-fly from qr_code_value (see routers/characters.py), so this script does not
-touch the database. It only re-renders each character's QR PNG from its
-existing qr_code_value (the code itself is left untouched) and uploads it
-to Supabase under {qr_code_value}.png, matching the same deterministic
-naming the API now uses to build qr_code_image_url.
-
-Safe to re-run: uploads use upsert, so re-running just re-uploads the same
-image over itself.
-
-Requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in the environment, and
-the "qr-codes" bucket to already exist with public read access.
+Writes to Supabase Storage when SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY are
+set (the "qr-codes" bucket must exist with public read access), otherwise
+to local disk under uploads/qr-codes/. Safe to re-run: existing images are
+overwritten.
 
 Run from the project root:
-    python backend/migrate_qr_codes_to_supabase.py
+    python scripts/upload_qr_images.py
 """
 
 import sys
 from pathlib import Path
 
-# Ensure the backend package is importable
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 
 from app.database import SessionLocal
 from app.models import Character
 from app.qr_codes import generate_and_upload_qr_image
 
 
-def migrate():
+def upload_all():
     db = SessionLocal()
     try:
         characters = db.query(Character).order_by(Character.sort_order).all()
@@ -60,4 +53,4 @@ def migrate():
 
 
 if __name__ == "__main__":
-    migrate()
+    upload_all()

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
+  <circle cx="120" cy="120" r="116" fill="#2b1055"/>
+  <path d="M120 38 v18" stroke="#ffb703" stroke-width="6" stroke-linecap="round"/>
+  <rect x="92" y="56" width="56" height="12" rx="4" fill="#ffb703"/>
+  <path d="M96 68 Q78 112 96 156 H144 Q162 112 144 68 Z" fill="#ffd166" stroke="#ffb703" stroke-width="5"/>
+  <path d="M120 88 Q106 112 120 136 Q134 112 120 88 Z" fill="#fb8500"/>
+  <rect x="92" y="156" width="56" height="12" rx="4" fill="#ffb703"/>
+  <text x="120" y="200" font-size="22" font-weight="700" text-anchor="middle" fill="#ffb703" font-family="Outfit, Arial, sans-serif" letter-spacing="2">LANTERN GROVE</text>
+</svg>

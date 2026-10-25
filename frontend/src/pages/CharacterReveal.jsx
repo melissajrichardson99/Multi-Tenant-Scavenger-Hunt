@@ -56,7 +56,9 @@ export default function CharacterReveal() {
   const totalFound = scanResult?.total_found;
   const totalCharacters = scanResult?.total_characters;
   const unlockedRewards = scanResult?.newly_unlocked_rewards || [];
-  const isHuntComplete = unlockedRewards.length > 0;
+  // Completion comes from the scan totals (secret characters are already
+  // excluded server-side), not from whether a reward tier happened to unlock.
+  const isHuntComplete = !isRevisit && totalCharacters > 0 && totalFound >= totalCharacters;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1rem' }}>

@@ -1,11 +1,13 @@
-import os
-from pathlib import Path
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.exc import SQLAlchemyError, StatementError
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from .database import engine, Base, get_db
+from .config import CORS_ALLOWED_ORIGINS, USE_SUPABASE_STORAGE, UPLOADS_DIR
+from .database import engine, get_db
+from .storage import BUCKETS, LOCAL_URL_PREFIX
 from .routers import (
     organizations,
     hunts,
@@ -17,12 +19,6 @@ from .routers import (
     proxy
 )
 
-# ── QR codes directory setup ──────────────────────────────────────────────────
-# Lives at <project-root>/qr_codes/ (one level above the backend/ package).
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-QR_CODES_DIR = PROJECT_ROOT / "qr_codes"
-QR_CODES_DIR.mkdir(parents=True, exist_ok=True)
-
 # ── FastAPI app ───────────────────────────────────────────────────────────────
 app = FastAPI(
     title="Cobb's Scavenger Hunt API",
@@ -30,30 +26,49 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Enable CORS for local Vite development
+# Explicit origins only (CORS_ALLOWED_ORIGINS, see config.py). Admin auth is a
+# Bearer header and guests pass device_token explicitly, so no cookies or
+# other credentials ever need to cross origins.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify frontend domain
-    allow_credentials=True,
+    allow_origins=CORS_ALLOWED_ORIGINS,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Serve generated QR code images at /qr_codes/<filename>.png
-app.mount("/qr_codes", StaticFiles(directory=str(QR_CODES_DIR)), name="qr_codes")
+# Local-disk storage (development/test): serve uploaded character images and
+# QR PNGs at /uploads/<bucket>/<object>. With Supabase Storage configured,
+# files are served by Supabase instead and nothing is mounted here.
+if not USE_SUPABASE_STORAGE:
+    for bucket in BUCKETS:
+        (UPLOADS_DIR / bucket).mkdir(parents=True, exist_ok=True)
+    app.mount(LOCAL_URL_PREFIX, StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
+
+
+@app.exception_handler(StatementError)
+def handle_statement_error(request: Request, exc: StatementError):
+    # A malformed id (e.g. "abc" where a UUID is expected) fails while
+    # binding query parameters; treat it like any other unknown id.
+    if isinstance(exc.orig, ValueError):
+        return JSONResponse(status_code=404, content={"detail": "Not found"})
+    raise exc
+
 
 # ── Health check ──────────────────────────────────────────────────────────────
 @app.get("/api/health")
 def health_check(db: Session = Depends(get_db)):
+    # Never echo the driver's error text: it can include hostnames or usernames.
     try:
         db.execute(text("SELECT 1"))
         db_status = "connected"
-    except Exception as e:
-        db_status = f"error: {str(e)}"
+    except SQLAlchemyError:
+        db_status = "unavailable"
 
     return {
-        "status": "ok",
-        "database": db_status
+        "status": "ok" if db_status == "connected" else "degraded",
+        "database": db_status,
+        "database_type": engine.dialect.name,
     }
 
 # ── Routers ───────────────────────────────────────────────────────────────────

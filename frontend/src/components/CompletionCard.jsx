@@ -29,9 +29,10 @@ function isLightColor(hex) {
 // pixel data when capturing this card — it renders fine live but exports as
 // a blank circle. Routing through our own backend sidesteps that entirely:
 // the proxy fetches the image server-side (no CORS involved) and serves it
-// back same-origin.
+// back same-origin. Root-relative URLs (e.g. bundled demo logos) are
+// already same-origin and need no proxy.
 function proxiedImageUrl(url) {
-  if (!url) return url;
+  if (!url || url.startsWith('/')) return url;
   return `/api/proxy-image?url=${encodeURIComponent(url)}`;
 }
 
@@ -60,7 +61,7 @@ const DEFAULT_ORG = {
 };
 
 const CompletionCard = forwardRef(function CompletionCard(
-  { org, progress, deviceToken, unlockedRewards = [] },
+  { org, progress, unlockedRewards = [] },
   ref
 ) {
   const theme = { ...DEFAULT_ORG, ...(org || {}) };

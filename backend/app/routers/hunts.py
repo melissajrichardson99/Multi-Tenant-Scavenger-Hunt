@@ -5,7 +5,6 @@ from sqlalchemy import func
 from ..database import get_db
 from ..models import Organization, Hunt, Character, PlayerSession, Scan, AdminUser
 from ..auth import get_current_admin
-from ..storage import QR_CODES_BUCKET, public_url
 from ..pdf_generation import build_qr_code_pdf, safe_filename_stem
 
 router = APIRouter(tags=["Hunts"])
@@ -240,7 +239,7 @@ def print_hunt_qr_codes(hunt_id: str, db: Session = Depends(get_db), admin: Admi
             "name": character.name,
             "hint": character.hint,
             "area": character.area,
-            "qr_code_image_url": public_url(QR_CODES_BUCKET, f"{character.qr_code_value}.png"),
+            "qr_code_value": character.qr_code_value,
         }
         for character in characters
     ]

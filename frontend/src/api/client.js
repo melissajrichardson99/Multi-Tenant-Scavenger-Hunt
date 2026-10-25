@@ -97,6 +97,11 @@ export const apiClient = {
   getTrivia: (characterId, deviceToken) =>
     request(`/characters/${characterId}/trivia?device_token=${encodeURIComponent(deviceToken)}`),
 
+  answerTrivia: (characterId, deviceToken, answer) => request(`/characters/${characterId}/trivia/answer`, {
+    method: 'POST',
+    body: JSON.stringify({ device_token: deviceToken, answer })
+  }),
+
   // Admin Endpoints
   adminLogin: async (email, password) => {
     const data = await request('/admin/login', {
@@ -199,10 +204,5 @@ export const apiClient = {
       method: 'POST',
       body: formData,
     });
-  },
-
-  createRewardTier: (tierData) => request('/admin/reward-tiers', {
-    method: 'POST',
-    body: JSON.stringify(tierData)
-  })
+  }
 };

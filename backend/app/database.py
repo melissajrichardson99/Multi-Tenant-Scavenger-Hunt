@@ -1,39 +1,39 @@
-import os
 from pathlib import Path
-from dotenv import load_dotenv
 from sqlalchemy import create_engine
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-# Locate the root directory containing .env
-# Project layout:
-# /workspace
-#   /.env
-#   /backend
-#     /app
-#       /database.py
-current_dir = Path(__file__).resolve().parent
-root_dir = current_dir.parent.parent
-env_path = root_dir / ".env"
+from .config import DATABASE_URL, PROJECT_ROOT
 
-if env_path.exists():
-    load_dotenv(dotenv_path=env_path)
-else:
-    load_dotenv()  # Fallback to standard searching
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+def _resolve_database_url(raw_url: str):
+    """
+    Relative SQLite paths (e.g. sqlite:///./dev.db) are resolved against the
+    project root, so the backend (run from backend/) and the scripts (run
+    from the project root) always open the same file.
+    """
+    # Plain postgresql:// URLs (and Supabase-style postgres://) use the
+    # psycopg2 driver from requirements.txt. SQLAlchemy 2.1 would otherwise
+    # default to psycopg 3, which isn't installed.
+    if raw_url.startswith("postgres://"):
+        raw_url = "postgresql://" + raw_url[len("postgres://"):]
+    url = make_url(raw_url)
+    if url.drivername == "postgresql":
+        url = url.set(drivername="postgresql+psycopg2")
+    if url.get_backend_name() == "sqlite" and url.database and url.database != ":memory:":
+        db_path = Path(url.database)
+        if not db_path.is_absolute():
+            url = url.set(database=str((PROJECT_ROOT / db_path).resolve()))
+    return url
 
-if not DATABASE_URL:
-    # Use a dummy SQLite in-memory DB or raise an error.
-    # The spec says DATABASE_URL should be in .env. We fallback safely if not found.
-    DATABASE_URL = "sqlite:///:memory:"
 
-# SQLAlchemy engine and session setup
-# If using Postgres, we don't need check_same_thread. For SQLite (fallback) we do.
-connect_args = {}
-if DATABASE_URL.startswith("sqlite"):
-    connect_args = {"check_same_thread": False}
+database_url = _resolve_database_url(DATABASE_URL)
 
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+# SQLite needs check_same_thread=False because FastAPI serves requests from
+# a thread pool; Postgres needs no extra connect args.
+connect_args = {"check_same_thread": False} if database_url.get_backend_name() == "sqlite" else {}
+
+engine = create_engine(database_url, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()

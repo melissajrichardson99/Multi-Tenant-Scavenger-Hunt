@@ -89,6 +89,8 @@ export default function Admin() {
       refreshOrganizations();
       refreshAdminUsers();
     }
+    // Load once per login; the refresh helpers are recreated every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   useEffect(() => {
@@ -151,7 +153,7 @@ export default function Admin() {
               <input 
                 type="email" 
                 required 
-                placeholder="admin@cobbsadventurepark.com"
+                placeholder="admin@example.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
               />

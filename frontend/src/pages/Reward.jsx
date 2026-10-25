@@ -45,7 +45,7 @@ export default function Reward() {
         setProgress(data);
         setLoading(false);
       })
-      .catch(err => {
+      .catch(() => {
         setLoading(false);
       });
   }, [navigate, activeOrg]);
@@ -97,15 +97,17 @@ export default function Reward() {
           return;
         }
 
-        const fileName = `cobbs-explorer-completion-${deviceToken.substring(0, 8)}.png`;
+        const orgName = activeOrg?.name || 'the park';
+        const fileSlug = activeOrg?.slug || 'scavenger-hunt';
+        const fileName = `${fileSlug}-explorer-completion-${deviceToken.substring(0, 8)}.png`;
         const file = new File([blob], fileName, { type: 'image/png' });
 
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           try {
             await navigator.share({
               files: [file],
-              title: "I completed Cobb's Adventure Park Scavenger Hunt!",
-              text: "I found every character at Cobb's Adventure Park!",
+              title: `I completed the ${orgName} Scavenger Hunt!`,
+              text: `I found every character at ${orgName}!`,
             });
           } catch (err) {
             if (err.name !== 'AbortError') {
@@ -135,7 +137,6 @@ export default function Reward() {
             ref={cardCaptureRef}
             org={activeOrg}
             progress={progress}
-            deviceToken={deviceToken}
             unlockedRewards={unlockedRewards}
           />
 
@@ -153,7 +154,7 @@ export default function Reward() {
           <h2>Badge Locked</h2>
 
           <p style={{ color: 'var(--text-secondary)', lineHeight: '1.6' }}>
-            You have scanned <strong>{progress?.total_found || 0}</strong> of <strong>{progress?.total_characters || 10}</strong> characters.
+            You have scanned <strong>{progress?.total_found || 0}</strong> of <strong>{progress?.total_characters || 0}</strong> characters.
             Keep scanning to hit 100% completion and unlock your official explorer completion card!
           </p>
 

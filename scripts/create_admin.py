@@ -1,24 +1,27 @@
+# Creates an admin_users row with a bcrypt-hashed password (never insert a plaintext password into password_hash).
 """
-create_admin.py — One-time script to create an admin_users row with a properly
-bcrypt-hashed password (never insert a plaintext password into password_hash).
-
 Run from the project root:
-    python backend/create_admin.py --email admin@cobbsadventurepark.com --org-slug cobbs
+    python scripts/create_admin.py --email admin@example.com --org-slug cobbs
 
 Omit --org-slug to create a super-admin (organization_id = NULL, can see all orgs).
-Password is prompted for interactively (not echoed, not passed on the command line).
+The password is prompted for interactively (not echoed, not passed on the
+command line). For non-interactive setup (CI, automated demos) it can be
+supplied through the ADMIN_PASSWORD environment variable instead.
 """
 
 import argparse
+import os
 import sys
 from getpass import getpass
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 
 from app.database import SessionLocal
 from app.models import AdminUser, Organization
 from app.auth import hash_password
+
+MIN_PASSWORD_LENGTH = 8
 
 
 def create_admin(email: str, password: str, org_slug: str | None):
@@ -63,13 +66,15 @@ if __name__ == "__main__":
     parser.add_argument("--org-slug", default=None, help="Organization slug to scope this admin to (omit for super-admin)")
     args = parser.parse_args()
 
-    password = getpass("Password for new admin: ")
-    confirm = getpass("Confirm password: ")
-    if password != confirm:
-        print("[ERROR] Passwords did not match.", file=sys.stderr)
-        sys.exit(1)
-    if len(password) < 8:
-        print("[ERROR] Password must be at least 8 characters.", file=sys.stderr)
+    password = os.getenv("ADMIN_PASSWORD")
+    if not password:
+        password = getpass("Password for new admin: ")
+        confirm = getpass("Confirm password: ")
+        if password != confirm:
+            print("[ERROR] Passwords did not match.", file=sys.stderr)
+            sys.exit(1)
+    if len(password) < MIN_PASSWORD_LENGTH:
+        print(f"[ERROR] Password must be at least {MIN_PASSWORD_LENGTH} characters.", file=sys.stderr)
         sys.exit(1)
 
     create_admin(args.email, password, args.org_slug)

@@ -8,12 +8,31 @@ from sqlalchemy import (
     DateTime,
     UniqueConstraint,
     text,
-    CheckConstraint
+    CheckConstraint,
+    TypeDecorator,
+    Uuid,
 )
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
+
+
+class UUID(TypeDecorator):
+    """
+    Native UUID on Postgres, CHAR(32) on SQLite. Also accepts UUID strings
+    as bind parameters (route handlers mostly receive ids as strings), which
+    SQLAlchemy's own Uuid type only tolerates on Postgres.
+    """
+    impl = Uuid
+    cache_ok = True
+
+    def __init__(self, as_uuid=True):
+        super().__init__(as_uuid=as_uuid)
+
+    def process_bind_param(self, value, dialect):
+        if isinstance(value, str):
+            return uuid.UUID(value)
+        return value
 
 class Organization(Base):
     __tablename__ = "organizations"
@@ -144,7 +163,7 @@ class AdminUser(Base):
     organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=True)  # Null = super admin
     email = Column(String, unique=True, nullable=False)
     password_hash = Column(String, nullable=False)
-    is_active = Column(Boolean, default=True, server_default="true")
+    is_active = Column(Boolean, nullable=False, default=True, server_default="true")
     created_at = Column(DateTime(timezone=True), default=func.now(), server_default=func.now())
 
     # Relationships

@@ -1,4 +1,3 @@
-import os
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -7,6 +6,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
+from .config import JWT_SECRET_KEY
 from .database import get_db
 from .models import AdminUser
 
@@ -14,10 +14,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_HOURS = 24
-
-# Dev-only fallback so the app doesn't crash if JWT_SECRET_KEY isn't set yet.
-# Set a real JWT_SECRET_KEY in .env before deploying anywhere non-local.
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY") or "dev-only-insecure-secret-change-me"
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
