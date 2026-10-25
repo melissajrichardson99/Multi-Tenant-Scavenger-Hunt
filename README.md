@@ -1,4 +1,4 @@
-# Cobb's Scavenger Hunt
+# Multi Tenant Scavenger Hunt
 
 A mobile-first QR-code scavenger hunt web app, built for **Cobb's Adventure
 Park** and designed from day one to serve several parks from one deployment.
